@@ -38,7 +38,7 @@ func (mf *MyFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func MakeLogger(filename string, display bool) *logrus.Logger {
+func New(filename string, display bool) *logrus.Logger {
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		panic(err.Error())

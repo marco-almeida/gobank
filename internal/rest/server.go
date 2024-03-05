@@ -3,16 +3,18 @@ package rest
 import (
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type APIServer struct {
 	addr string
+	log  *logrus.Logger
 }
 
-func NewAPIServer(addr string) *APIServer {
+func NewAPIServer(addr string, logger *logrus.Logger) *APIServer {
 	return &APIServer{
 		addr: addr,
+		log:  logger,
 	}
 }
 
@@ -24,15 +26,15 @@ func (s *APIServer) Serve() {
 	// projectService := NewProjectService(s.store)
 	// projectService.RegisterRoutes(subrouter)
 
-	// userService := NewUserService(s.store)
-	// userService.RegisterRoutes(subrouter)
+	userService := NewUserService(s.log)
+	userService.RegisterRoutes(router)
 
 	// tasksService := NewTasksService(s.store)
 	// tasksService.RegisterRoutes(subrouter)
 
-	// TODO: use same logger for all services
+	s.log.Info("Starting the API server at", s.addr)
+	loggingMiddleware := LoggingMiddleware(s.log)
+	loggedRouter := loggingMiddleware(router)
 
-	log.Println("Starting the API server at", s.addr)
-
-	log.Fatal(http.ListenAndServe(s.addr, router))
+	s.log.Fatal(http.ListenAndServe(s.addr, loggedRouter))
 }

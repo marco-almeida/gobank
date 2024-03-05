@@ -1,8 +1,8 @@
 run: builda
-	@bin/go-api-structure.exe
+	@bin/golang_api_project_layout.exe $(filter-out $@, $(MAKECMDGOALS))
 
 builda:
-	@go build -o bin/go-api-structure.exe ./cmd/go-api-structure.go
+	@go build -o bin/golang_api_project_layout.exe ./cmd/golang_api_project_layout.go
 
 test:
 	@go test -v ./...

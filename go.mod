@@ -1,4 +1,4 @@
-module github.com/marco-almeida/go-api-structure
+module github.com/marco-almeida/golang-api-project-layout
 
 go 1.22.0
 
