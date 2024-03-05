@@ -1,8 +1,8 @@
-run: build
-	@./bin/api
+run: builda
+	@bin/go-api-structure.exe
 
-build:
-	@go build -o bin/api
+builda:
+	@go build -o bin/go-api-structure.exe ./cmd/go-api-structure.go
 
 test:
 	@go test -v ./...
