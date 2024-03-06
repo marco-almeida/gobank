@@ -21,7 +21,15 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
 git clone https://github.com/marco-almeida/go-rest-api/tree/main
 ```
 
-2. Run the application
+2. Set the environment variables in the `configs/.env` file according to the template in `configs/example.env`.
+
+3. Run the database
+
+```sh
+docker compose -f deploy/docker-compose.yml --env-file configs/.env up -d
+```
+
+4. Run the application
 
 ```sh
 make run

@@ -58,7 +58,16 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 
 	// insert user into database
 
-	u.WriteJSON(w, http.StatusOK, payload)
+	user, err := s.store.CreateUser(&payload)
+	if err != nil {
+		s.log.Errorf("Error creating user: %v", err)
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error creating user"})
+		return
+	}
+
+	// return user id
+	u.WriteJSON(w, http.StatusCreated, map[string]interface{}{"id": user.ID})
+
 }
 
 func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
