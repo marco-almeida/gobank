@@ -2,15 +2,16 @@ package rest
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/lib/pq"
 	"github.com/marco-almeida/golang-api-project-layout/internal/storage"
 	t "github.com/marco-almeida/golang-api-project-layout/internal/types"
 	u "github.com/marco-almeida/golang-api-project-layout/pkg/utils"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
@@ -26,13 +27,15 @@ func NewUserService(logger *logrus.Logger, s storage.Storer) *UserService {
 }
 
 func (s *UserService) RegisterRoutes(r *http.ServeMux) {
+	r.HandleFunc("GET /api/v1/users", s.handleGetAllUsers)
 	r.HandleFunc("POST /api/v1/users/register", s.handleUserRegister)
-	r.HandleFunc("POST /api/v1/users/{id}/login", s.handleUserLogin)
-	r.HandleFunc("DELETE /api/v1/users/{id}", s.handleUserDelete)
+	r.HandleFunc("POST /api/v1/users/login", s.handleUserLogin)
+	r.HandleFunc("DELETE /api/v1/users/{id}", s.handleUserDelete)       // TODO: no need for id after auth is implemented
+	r.HandleFunc("PUT /api/v1/users/{id}", s.handleUpdateUser)          // TODO: no need for id after auth is implemented
+	r.HandleFunc("PATCH /api/v1/users/{id}", s.handlePartialUpdateUser) // TODO: no need for id after auth is implemented
 }
 
 func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request) {
-	// user has first name, last name, email, password
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		s.log.Errorf("Error reading request body: %v", err)
@@ -57,9 +60,7 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// insert user into database
-
-	userID, err := s.store.CreateUser(&payload)
+	err = s.store.CreateUser(&payload)
 	if err != nil {
 		s.log.Infof("Error creating user: %v", err)
 		// check if error of type duplicate key
@@ -74,16 +75,81 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// return user id
-	u.WriteJSON(w, http.StatusCreated, map[string]interface{}{"id": userID})
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	// 3. Create JWT and set it in a cookie
+	// 4. Return JWT in response
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		s.log.Errorf("Error reading request body: %v", err)
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error reading request body"})
+		return
+	}
+
+	defer r.Body.Close()
+
+	var payload t.LoginUserRequest
+	err = json.Unmarshal(body, &payload)
+	if err != nil {
+		s.log.Infof("Invalid request payload: %v", err)
+		u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "Invalid request payload"})
+		return
+	}
+
+	user, err := s.store.GetUserByEmail(payload.Email)
+	if err != nil {
+		s.log.Infof("Error getting user: %v", err)
+		u.WriteJSON(w, http.StatusUnauthorized, u.ErrorResponse{Error: "Access denied"})
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(payload.Password))
+	if err != nil {
+		s.log.Infof("Invalid password: %v", err)
+		u.WriteJSON(w, http.StatusUnauthorized, u.ErrorResponse{Error: "Access denied"})
+		return
+	}
+
+	// create JWT
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("User login with id %s", r.PathValue("id"))))
 }
 
 func (s *UserService) handleUserDelete(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("User logout"))
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		s.log.Infof("Invalid user id: %v", err)
+		u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "Invalid user id"})
+		return
+	}
+
+	err = s.store.DeleteUserByID(id)
+	if err != nil {
+		s.log.Errorf("Error deleting user: %v", err)
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error deleting user"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *UserService) handleGetAllUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := s.store.GetAllUsers()
+	if err != nil {
+		s.log.Errorf("Error getting users: %v", err)
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error getting users"})
+		return
+	}
+
+	u.WriteJSON(w, http.StatusOK, users)
+}
+
+func (s *UserService) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	// TODO
+}
+
+func (s *UserService) handlePartialUpdateUser(w http.ResponseWriter, r *http.Request) {
+	// TODO
 }

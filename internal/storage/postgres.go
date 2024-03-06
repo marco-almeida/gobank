@@ -49,23 +49,48 @@ func (s *PostgresStorage) createUsersTable() error {
 	return err
 }
 
-func (s *PostgresStorage) CreateUser(u *t.RegisterUserRequest) (int64, error) {
+func (s *PostgresStorage) CreateUser(u *t.RegisterUserRequest) error {
 	// Hashing the password with the default cost of 10
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	// Inserting the user into the database
-	lastInsertId := int64(0)
-	err = s.db.QueryRow(`INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, $4) RETURNING id`, u.FirstName, u.LastName, u.Email, string(hashedPassword)).Scan(&lastInsertId)
+	_, err = s.db.Exec(`INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, $4)`, u.FirstName, u.LastName, u.Email, string(hashedPassword))
 
+	return err
+}
+
+func (s *PostgresStorage) GetAllUsers() ([]t.User, error) {
+	rows, err := s.db.Query(`SELECT id, first_name, last_name, email, created_at FROM users`)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
+	defer rows.Close()
 
-	return lastInsertId, nil
-	// // Comparing the password with the hash
-	// err = bcrypt.CompareHashAndPassword(hashedPassword, passwordBytes)
-	// fmt.Println(err) // nil means it is a match
+	users := []t.User{}
+	for rows.Next() {
+		var u t.User
+		err := rows.Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+func (s *PostgresStorage) DeleteUserByID(id int64) error {
+	_, err := s.db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	return err
+}
+
+func (s *PostgresStorage) GetUserByEmail(email string) (t.User, error) {
+	var u t.User
+	err := s.db.QueryRow(`SELECT id, email, password FROM users WHERE email = $1`, email).Scan(&u.ID, &u.Email, &u.Password)
+	if err != nil {
+		return t.User{}, err
+	}
+	return u, nil
 }

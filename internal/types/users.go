@@ -31,6 +31,10 @@ type User struct {
 	LastName  string    `json:"lastName"`
 	Email     string    `json:"email"`
 	Password  string    `json:"-"`
-	Salt      string    `json:"-"`
 	CreatedAt time.Time `json:"-"`
+}
+
+type LoginUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
