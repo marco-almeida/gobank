@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/lib/pq"
 	"github.com/marco-almeida/golang-api-project-layout/internal/storage"
 	t "github.com/marco-almeida/golang-api-project-layout/internal/types"
 	u "github.com/marco-almeida/golang-api-project-layout/pkg/utils"
@@ -58,16 +59,23 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 
 	// insert user into database
 
-	user, err := s.store.CreateUser(&payload)
+	userID, err := s.store.CreateUser(&payload)
 	if err != nil {
-		s.log.Errorf("Error creating user: %v", err)
+		s.log.Infof("Error creating user: %v", err)
+		// check if error of type duplicate key
+		pgErr, ok := err.(*pq.Error)
+		if ok {
+			if pgErr.Code == "23505" {
+				u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "email address is already in use"})
+				return
+			}
+		}
 		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error creating user"})
 		return
 	}
 
 	// return user id
-	u.WriteJSON(w, http.StatusCreated, map[string]interface{}{"id": user.ID})
-
+	u.WriteJSON(w, http.StatusCreated, map[string]interface{}{"id": userID})
 }
 
 func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {

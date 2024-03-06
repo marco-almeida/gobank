@@ -5,5 +5,6 @@ import (
 )
 
 type Storer interface {
-	CreateUser(u *t.RegisterUserRequest) (*t.User, error)
+	// returns given id to user
+	CreateUser(u *t.RegisterUserRequest) (int64, error)
 }
