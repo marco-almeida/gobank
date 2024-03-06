@@ -3,18 +3,21 @@ package rest
 import (
 	"net/http"
 
+	"github.com/marco-almeida/golang-api-project-layout/internal/storage"
 	"github.com/sirupsen/logrus"
 )
 
 type APIServer struct {
-	addr string
-	log  *logrus.Logger
+	addr  string
+	log   *logrus.Logger
+	store storage.Storer
 }
 
-func NewAPIServer(addr string, logger *logrus.Logger) *APIServer {
+func NewAPIServer(addr string, logger *logrus.Logger, store storage.Storer) *APIServer {
 	return &APIServer{
-		addr: addr,
-		log:  logger,
+		addr:  addr,
+		log:   logger,
+		store: store,
 	}
 }
 
@@ -26,7 +29,7 @@ func (s *APIServer) Serve() {
 	// projectService := NewProjectService(s.store)
 	// projectService.RegisterRoutes(subrouter)
 
-	userService := NewUserService(s.log)
+	userService := NewUserService(s.log, s.store)
 	userService.RegisterRoutes(router)
 
 	// tasksService := NewTasksService(s.store)

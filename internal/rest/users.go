@@ -6,18 +6,21 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/marco-almeida/golang-api-project-layout/internal/storage"
 	t "github.com/marco-almeida/golang-api-project-layout/internal/types"
 	u "github.com/marco-almeida/golang-api-project-layout/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
 
 type UserService struct {
-	log *logrus.Logger
+	log   *logrus.Logger
+	store storage.Storer
 }
 
-func NewUserService(logger *logrus.Logger) *UserService {
+func NewUserService(logger *logrus.Logger, s storage.Storer) *UserService {
 	return &UserService{
-		log: logger,
+		log:   logger,
+		store: s,
 	}
 }
 
@@ -48,9 +51,12 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 
 	err = t.ValidateRegisterUserRequest(&payload)
 	if err != nil {
+		s.log.Infof("Invalid request payload: %v", err)
 		u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: err.Error()})
 		return
 	}
+
+	// insert user into database
 
 	u.WriteJSON(w, http.StatusOK, payload)
 }
