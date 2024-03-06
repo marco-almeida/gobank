@@ -1,4 +1,4 @@
-module github.com/marco-almeida/golang-api-project-layout
+module github.com/marco-almeida/gobank
 
 go 1.22.0
 

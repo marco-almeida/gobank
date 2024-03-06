@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	config "github.com/marco-almeida/golang-api-project-layout/configs"
-	"github.com/marco-almeida/golang-api-project-layout/internal/rest"
-	"github.com/marco-almeida/golang-api-project-layout/internal/storage"
-	"github.com/marco-almeida/golang-api-project-layout/pkg/logger"
+	config "github.com/marco-almeida/gobank/configs"
+	"github.com/marco-almeida/gobank/internal/rest"
+	"github.com/marco-almeida/gobank/internal/storage"
+	"github.com/marco-almeida/gobank/pkg/logger"
 )
 
 func main() {

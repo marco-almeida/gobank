@@ -4,7 +4,7 @@ import (
 	"database/sql"
 
 	_ "github.com/lib/pq"
-	t "github.com/marco-almeida/golang-api-project-layout/internal/types"
+	t "github.com/marco-almeida/gobank/internal/types"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )

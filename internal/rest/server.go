@@ -3,7 +3,7 @@ package rest
 import (
 	"net/http"
 
-	"github.com/marco-almeida/golang-api-project-layout/internal/storage"
+	"github.com/marco-almeida/gobank/internal/storage"
 	"github.com/sirupsen/logrus"
 )
 

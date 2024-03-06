@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/lib/pq"
-	"github.com/marco-almeida/golang-api-project-layout/internal/storage"
-	t "github.com/marco-almeida/golang-api-project-layout/internal/types"
-	u "github.com/marco-almeida/golang-api-project-layout/pkg/utils"
+	"github.com/marco-almeida/gobank/internal/storage"
+	t "github.com/marco-almeida/gobank/internal/types"
+	u "github.com/marco-almeida/gobank/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )

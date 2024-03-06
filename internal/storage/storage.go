@@ -1,7 +1,7 @@
 package storage
 
 import (
-	t "github.com/marco-almeida/golang-api-project-layout/internal/types"
+	t "github.com/marco-almeida/gobank/internal/types"
 )
 
 type Storer interface {

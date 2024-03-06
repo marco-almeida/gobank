@@ -1,8 +1,8 @@
 run: builda
-	@bin/golang_api_project_layout.exe $(filter-out $@, $(MAKECMDGOALS))
+	@bin/gobank.exe
 
 builda:
-	@go build -o bin/golang_api_project_layout.exe ./cmd/golang_api_project_layout.go
+	@go build -o bin/gobank.exe ./cmd/gobank.go
 
 test:
 	@go test -v ./...
