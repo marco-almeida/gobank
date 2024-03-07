@@ -94,3 +94,13 @@ func (s *PostgresStorage) GetUserByEmail(email string) (t.User, error) {
 	}
 	return u, nil
 }
+
+func (s *PostgresStorage) UpdateUserByID(id int64, u *t.RegisterUserRequest) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(`UPDATE users SET first_name = $1, last_name = $2, email = $3, password = $4 WHERE id = $5`, u.FirstName, u.LastName, u.Email, string(hashedPassword), id)
+	return err
+}

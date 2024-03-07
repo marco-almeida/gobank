@@ -147,9 +147,86 @@ func (s *UserService) handleGetAllUsers(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *UserService) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
-	// TODO
+
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		s.log.Infof("Invalid user id: %v", err)
+		u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "Invalid user id"})
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		s.log.Errorf("Error reading request body: %v", err)
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error reading request body"})
+		return
+	}
+
+	defer r.Body.Close()
+
+	var payload t.RegisterUserRequest
+	err = json.Unmarshal(body, &payload)
+	if err != nil {
+		s.log.Infof("Invalid request payload: %v", err)
+		u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "Invalid request payload"})
+		return
+	}
+
+	err = t.ValidateRegisterUserRequest(&payload)
+	if err != nil {
+		s.log.Infof("Invalid request payload: %v", err)
+		u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	// TODO: get id by jwt
+	err = s.store.UpdateUserByID(id, &payload)
+	if err != nil {
+		s.log.Errorf("Error updating user: %v", err)
+
+		pgErr, ok := err.(*pq.Error)
+		if ok {
+			if pgErr.Code == "23505" {
+				u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "email address is already in use"})
+				return
+			}
+		}
+
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error updating user"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *UserService) handlePartialUpdateUser(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		s.log.Infof("Invalid user id: %v", err)
+		u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "Invalid user id"})
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		s.log.Errorf("Error reading request body: %v", err)
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error reading request body"})
+		return
+	}
+
+	defer r.Body.Close()
+
+	var payload t.RegisterUserRequest
+	err = json.Unmarshal(body, &payload)
+	if err != nil {
+		s.log.Infof("Invalid request payload: %v", err)
+		u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "Invalid request payload"})
+		return
+	}
+
+	s.log.Infof("Partial update user %d: %+v", id, payload)
+
+	u.WriteJSON(w, http.StatusOK, payload)
 }

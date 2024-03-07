@@ -10,4 +10,5 @@ type Storer interface {
 	GetAllUsers() ([]t.User, error)
 	DeleteUserByID(int64) error
 	GetUserByEmail(string) (t.User, error)
+	UpdateUserByID(int64, *t.RegisterUserRequest) error
 }
