@@ -24,14 +24,8 @@ func NewAPIServer(addr string, logger *logrus.Logger, store storage.Storer) *API
 func (s *APIServer) Serve() {
 	router := http.NewServeMux()
 
-	// projectService := NewProjectService(s.store)
-	// projectService.RegisterRoutes(subrouter)
-
 	userService := NewUserService(s.log, s.store)
 	userService.RegisterRoutes(router)
-
-	// tasksService := NewTasksService(s.store)
-	// tasksService.RegisterRoutes(subrouter)
 
 	s.log.Info("Starting the API server at", s.addr)
 	loggingMiddleware := LoggingMiddleware(s.log)

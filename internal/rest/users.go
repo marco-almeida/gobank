@@ -28,11 +28,12 @@ func NewUserService(logger *logrus.Logger, s storage.Storer) *UserService {
 
 func (s *UserService) RegisterRoutes(r *http.ServeMux) {
 	r.HandleFunc("GET /api/v1/users", JWTMiddleware(s.log, s.store, s.handleGetAllUsers))
+	r.HandleFunc("GET /api/v1/users/{user_id}", JWTMiddleware(s.log, s.store, s.handleGetUser))
 	r.HandleFunc("POST /api/v1/users/register", s.handleUserRegister)
 	r.HandleFunc("POST /api/v1/users/login", s.handleUserLogin)
-	r.HandleFunc("DELETE /api/v1/users/{id}", s.handleUserDelete)       // TODO: no need for id after auth is implemented
-	r.HandleFunc("PUT /api/v1/users/{id}", s.handleUpdateUser)          // TODO: no need for id after auth is implemented
-	r.HandleFunc("PATCH /api/v1/users/{id}", s.handlePartialUpdateUser) // TODO: no need for id after auth is implemented
+	r.HandleFunc("DELETE /api/v1/users/{user_id}", JWTMiddleware(s.log, s.store, s.handleUserDelete))
+	r.HandleFunc("PUT /api/v1/users/{user_id}", JWTMiddleware(s.log, s.store, s.handleUpdateUser))
+	r.HandleFunc("PATCH /api/v1/users/{user_id}", JWTMiddleware(s.log, s.store, s.handlePartialUpdateUser))
 }
 
 func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +135,7 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *UserService) handleUserDelete(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := r.PathValue("user_id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		s.log.Infof("Invalid user id: %v", err)
@@ -163,9 +164,27 @@ func (s *UserService) handleGetAllUsers(w http.ResponseWriter, r *http.Request) 
 	u.WriteJSON(w, http.StatusOK, users)
 }
 
-func (s *UserService) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+func (s *UserService) handleGetUser(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("user_id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		s.log.Infof("Invalid user id: %v", err)
+		u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "Invalid user id"})
+		return
+	}
 
-	idStr := r.PathValue("id")
+	user, err := s.store.GetUserByID(id)
+	if err != nil {
+		s.log.Errorf("Error getting user: %v", err)
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error getting user"})
+		return
+	}
+
+	u.WriteJSON(w, http.StatusOK, user)
+}
+
+func (s *UserService) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("user_id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		s.log.Infof("Invalid user id: %v", err)
@@ -218,7 +237,7 @@ func (s *UserService) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *UserService) handlePartialUpdateUser(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
+	idStr := r.PathValue("user_id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		s.log.Infof("Invalid user id: %v", err)
