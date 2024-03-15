@@ -227,6 +227,21 @@ func (s *UserService) handlePartialUpdateUser(w http.ResponseWriter, r *http.Req
 	}
 
 	s.log.Infof("Partial update user %d: %+v", id, payload)
+	err = s.store.PartialUpdateUserByID(id, &payload)
+	if err != nil {
+		s.log.Errorf("Error updating user: %v", err)
 
-	u.WriteJSON(w, http.StatusOK, payload)
+		pgErr, ok := err.(*pq.Error)
+		if ok {
+			if pgErr.Code == "23505" {
+				u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "email address is already in use"})
+				return
+			}
+		}
+
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error updating user"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

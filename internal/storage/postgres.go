@@ -104,3 +104,40 @@ func (s *PostgresStorage) UpdateUserByID(id int64, u *t.RegisterUserRequest) err
 	_, err = s.db.Exec(`UPDATE users SET first_name = $1, last_name = $2, email = $3, password = $4 WHERE id = $5`, u.FirstName, u.LastName, u.Email, string(hashedPassword), id)
 	return err
 }
+
+func (s *PostgresStorage) PartialUpdateUserByID(id int64, u *t.RegisterUserRequest) error {
+	// only update fields that are not empty
+	if u.FirstName != "" {
+		_, err := s.db.Exec(`UPDATE users SET first_name = $1 WHERE id = $2`, u.FirstName, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	if u.LastName != "" {
+		_, err := s.db.Exec(`UPDATE users SET last_name = $1 WHERE id = $2`, u.LastName, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	if u.Email != "" {
+		_, err := s.db.Exec(`UPDATE users SET email = $1 WHERE id = $2`, u.Email, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	if u.Password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		_, err = s.db.Exec(`UPDATE users SET password = $1 WHERE id = $2`, string(hashedPassword), id)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
