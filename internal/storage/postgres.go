@@ -46,6 +46,19 @@ func (s *PostgresStorage) createUsersTable() error {
 		password TEXT NOT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 	)`)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = s.db.Exec(`CREATE TABLE IF NOT EXISTS accounts (
+		id BIGSERIAL PRIMARY KEY NOT NULL,
+		user_id BIGINT NOT NULL,
+		balance INT NOT NULL DEFAULT 0,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	)`)
+
 	return err
 }
 
@@ -149,4 +162,50 @@ func (s *PostgresStorage) GetUserByID(id int64) (t.User, error) {
 		return t.User{}, err
 	}
 	return u, nil
+}
+
+// accounts
+
+func (s *PostgresStorage) CreateAccount(userID int64) error {
+	_, err := s.db.Exec(`INSERT INTO accounts (user_id) VALUES ($1)`, userID)
+	return err
+}
+
+func (s *PostgresStorage) GetAllAccountsByUserID(userID int64) ([]t.Account, error) {
+	rows, err := s.db.Query(`SELECT id, user_id, balance, created_at FROM accounts WHERE user_id = $1`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	accounts := []t.Account{}
+	for rows.Next() {
+		var a t.Account
+		err := rows.Scan(&a.ID, &a.UserID, &a.Balance, &a.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, a)
+	}
+	return accounts, nil
+}
+
+func (s *PostgresStorage) GetAccountByID(userID int64, accountID int64) (t.Account, error) {
+	var a t.Account
+	err := s.db.QueryRow(`SELECT id, user_id, balance, created_at FROM accounts WHERE user_id = $1 AND id = $2`, userID, accountID).Scan(&a.ID, &a.UserID, &a.Balance, &a.CreatedAt)
+	if err != nil {
+		return t.Account{}, err
+	}
+	return a, nil
+}
+
+func (s *PostgresStorage) DeleteAccountByID(accountID int64) error {
+	_, err := s.db.Exec(`DELETE FROM accounts WHERE id = $1`, accountID)
+	return err
+}
+
+func (s *PostgresStorage) UpdateAccountBalanceByID(accountID int64, balance t.USD) error {
+	// do a sum of the current balance and the new balance
+	_, err := s.db.Exec(`UPDATE accounts SET balance = balance + $1 WHERE id = $2`, balance, accountID)
+	return err
 }

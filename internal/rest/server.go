@@ -27,6 +27,9 @@ func (s *APIServer) Serve() {
 	userService := NewUserService(s.log, s.store)
 	userService.RegisterRoutes(router)
 
+	accountsService := NewAccountsService(s.log, s.store)
+	accountsService.RegisterRoutes(router)
+
 	s.log.Info("Starting the API server at", s.addr)
 	loggingMiddleware := LoggingMiddleware(s.log)
 	loggedRouter := loggingMiddleware(router)

@@ -80,8 +80,6 @@ func (s *UserService) handleUserRegister(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
-	// 3. Create JWT and set it in a cookie
-	// 4. Return JWT in response
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		s.log.Errorf("Error reading request body: %v", err)
@@ -130,7 +128,7 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	// return JWT in response
+	// TODO: return user id as well
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -216,7 +214,6 @@ func (s *UserService) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: get id by jwt
 	err = s.store.UpdateUserByID(id, &payload)
 	if err != nil {
 		s.log.Errorf("Error updating user: %v", err)
