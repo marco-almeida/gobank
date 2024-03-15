@@ -23,8 +23,6 @@ func NewAPIServer(addr string, logger *logrus.Logger, store storage.Storer) *API
 
 func (s *APIServer) Serve() {
 	router := http.NewServeMux()
-	// router := mux.NewRouter()
-	// subrouter := router.PathPrefix("/api/v1").Subrouter()
 
 	// projectService := NewProjectService(s.store)
 	// projectService.RegisterRoutes(subrouter)

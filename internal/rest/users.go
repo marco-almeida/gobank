@@ -27,7 +27,7 @@ func NewUserService(logger *logrus.Logger, s storage.Storer) *UserService {
 }
 
 func (s *UserService) RegisterRoutes(r *http.ServeMux) {
-	r.HandleFunc("GET /api/v1/users", s.handleGetAllUsers)
+	r.HandleFunc("GET /api/v1/users", JWTMiddleware(s.log, s.store, s.handleGetAllUsers))
 	r.HandleFunc("POST /api/v1/users/register", s.handleUserRegister)
 	r.HandleFunc("POST /api/v1/users/login", s.handleUserLogin)
 	r.HandleFunc("DELETE /api/v1/users/{id}", s.handleUserDelete)       // TODO: no need for id after auth is implemented
@@ -113,6 +113,23 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// create JWT
+	token, err := CreateJWT(user.ID)
+	if err != nil {
+		s.log.Errorf("Error creating JWT: %v", err)
+		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error creating token"})
+		return
+	}
+
+	s.log.Infof("User %d logged in, token %+v", user.ID, token)
+
+	// set JWT in cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    token,
+		HttpOnly: true,
+	})
+
+	// return JWT in response
 	w.WriteHeader(http.StatusOK)
 }
 

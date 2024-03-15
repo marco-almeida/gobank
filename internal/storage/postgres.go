@@ -141,3 +141,12 @@ func (s *PostgresStorage) PartialUpdateUserByID(id int64, u *t.RegisterUserReque
 
 	return nil
 }
+
+func (s *PostgresStorage) GetUserByID(id int64) (t.User, error) {
+	var u t.User
+	err := s.db.QueryRow(`SELECT id, first_name, last_name, email, created_at FROM users WHERE id = $1`, id).Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.CreatedAt)
+	if err != nil {
+		return t.User{}, err
+	}
+	return u, nil
+}

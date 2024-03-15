@@ -12,4 +12,5 @@ type Storer interface {
 	GetUserByEmail(string) (t.User, error)
 	UpdateUserByID(int64, *t.RegisterUserRequest) error
 	PartialUpdateUserByID(int64, *t.RegisterUserRequest) error
+	GetUserByID(int64) (t.User, error)
 }

@@ -12,6 +12,7 @@ type Config struct {
 	PgDb       string `env:"POSTGRES_DB" envDefault:"postgres"`
 	PgHost     string `env:"POSTGRES_HOST" envDefault:"localhost"`
 	Port       int    `env:"POSTGRES_PORT" envDefault:"5432"`
+	JWTSecret  string `env:"JWT_SECRET"`
 }
 
 var Envs = initConfig()
