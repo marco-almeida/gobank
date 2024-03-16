@@ -5,6 +5,17 @@ import (
 	"time"
 )
 
+var ErrZeroBalance = fmt.Errorf("account balance is zero")
+var ErrAccountNotFound = fmt.Errorf("account not found")
+
+type BalanceUpdateRequest struct {
+	Amount USD `json:"amount"`
+}
+
+func NewBalanceUpdateRequest(amount USD) BalanceUpdateRequest {
+	return BalanceUpdateRequest{Amount: amount}
+}
+
 type Account struct {
 	ID        int64     `json:"id"`
 	UserID    int64     `json:"userID"`

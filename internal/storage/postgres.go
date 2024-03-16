@@ -54,7 +54,7 @@ func (s *PostgresStorage) createUsersTable() error {
 	_, err = s.db.Exec(`CREATE TABLE IF NOT EXISTS accounts (
 		id BIGSERIAL PRIMARY KEY NOT NULL,
 		user_id BIGINT NOT NULL,
-		balance INT NOT NULL DEFAULT 0,
+		balance BIGINT NOT NULL DEFAULT 0,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 	)`)
@@ -199,13 +199,26 @@ func (s *PostgresStorage) GetAccountByID(userID int64, accountID int64) (t.Accou
 	return a, nil
 }
 
-func (s *PostgresStorage) DeleteAccountByID(accountID int64) error {
-	_, err := s.db.Exec(`DELETE FROM accounts WHERE id = $1`, accountID)
+func (s *PostgresStorage) DeleteAccountByID(userID int64, accountID int64) error {
+	// first check if account exists and its balance is 0
+	var balance t.USD
+	err := s.db.QueryRow(`SELECT balance FROM accounts WHERE user_id = $1 AND id = $2`, userID, accountID).Scan(&balance)
+	if err != nil {
+		return err
+	}
+	if balance != 0 {
+		return t.ErrZeroBalance
+	}
+
+	_, err = s.db.Exec(`DELETE FROM accounts WHERE user_id = $1 AND id = $2`, userID, accountID)
 	return err
 }
 
-func (s *PostgresStorage) UpdateAccountBalanceByID(accountID int64, balance t.USD) error {
-	// do a sum of the current balance and the new balance
-	_, err := s.db.Exec(`UPDATE accounts SET balance = balance + $1 WHERE id = $2`, balance, accountID)
-	return err
+func (s *PostgresStorage) UpdateAccountBalanceByID(userID int64, accountID int64, balance t.USD) (t.USD, error) {
+	var newBalance t.USD
+	err := s.db.QueryRow(`UPDATE accounts SET balance = balance + $1 WHERE user_id = $2 AND id = $3 RETURNING balance`, balance, userID, accountID).Scan(&newBalance)
+	if err != nil {
+		return 0, err
+	}
+	return newBalance, nil
 }

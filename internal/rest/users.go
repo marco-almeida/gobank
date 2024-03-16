@@ -127,9 +127,8 @@ func (s *UserService) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		HttpOnly: true,
 	})
-
-	// TODO: return user id as well
-	w.WriteHeader(http.StatusOK)
+	// return user id
+	u.WriteJSON(w, http.StatusOK, map[string]int64{"user_id": user.ID})
 }
 
 func (s *UserService) handleUserDelete(w http.ResponseWriter, r *http.Request) {
