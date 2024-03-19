@@ -1,0 +1,249 @@
+openapi: 3.0.3
+info:
+  title: gobank
+  version: 1.0.0
+  contact: {}
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/v1/users/register:
+    post:
+      tags:
+        - Users
+      summary: Register user
+      description: Creates a bank account for a new user, mail must be unique
+      operationId: registerUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: emaieel
+                firstName:
+                  type: string
+                  example: firstName
+                lastName:
+                  type: string
+                  example: lastName
+                password:
+                  type: string
+                  example: password
+            example:
+              email: emaieel
+              firstName: firstName
+              lastName: lastName
+              password: password
+      responses:
+        '200':
+          description: ''
+  /api/v1/users/login:
+    post:
+      tags:
+        - Users
+      summary: Login
+      description: Login
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: email
+                password:
+                  type: string
+                  example: password
+            example:
+              email: email
+              password: password
+      responses:
+        '200':
+          description: ''
+  /api/v1/users/{user_id}:
+    get:
+      tags:
+        - Users
+      summary: Get user
+      description: Get user
+      operationId: getUser
+      responses:
+        '200':
+          description: ''
+    put:
+      tags:
+        - Users
+      summary: Modify all parameters
+      description: Modify all parameters
+      operationId: modifyAllParameters
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: teste
+                firstName:
+                  type: string
+                  example: t1
+                lastName:
+                  type: string
+                  example: t2
+                password:
+                  type: string
+                  example: t5
+            example:
+              email: teste
+              firstName: t1
+              lastName: t2
+              password: t5
+      responses:
+        '200':
+          description: ''
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      description: Delete user
+      operationId: deleteUser
+      responses:
+        '200':
+          description: ''
+    patch:
+      tags:
+        - Users
+      summary: Modify parameter
+      description: Modify parameter
+      operationId: modifyParameter
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  example: pw
+            example:
+              password: pw
+      responses:
+        '200':
+          description: ''
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: '15'
+  /api/v1/users:
+    get:
+      tags:
+        - Users
+      summary: Get all users
+      description: Get all users
+      operationId: getAllUsers
+      responses:
+        '200':
+          description: ''
+  /api/v1/users/{user_id}/accounts/{account_id}/updateBalance:
+    post:
+      tags:
+        - Accounts
+      summary: Update balance
+      description: Update balance
+      operationId: updateBalance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 78
+            example:
+              amount: 78
+      responses:
+        '200':
+          description: ''
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: '16'
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: '1'
+  /api/v1/users/{user_id}/accounts/{account_id}:
+    get:
+      tags:
+        - Accounts
+      summary: Get user back account
+      description: Get user back account
+      operationId: getUserBackAccount
+      responses:
+        '200':
+          description: ''
+    delete:
+      tags:
+        - Accounts
+      summary: Delete bank account
+      description: Delete bank account
+      operationId: deleteBankAccount
+      responses:
+        '200':
+          description: ''
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: '16'
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: '1'
+  /api/v1/users/{user_id}/accounts:
+    get:
+      tags:
+        - Accounts
+      summary: Get all user bank accounts
+      description: Get all user bank accounts
+      operationId: getAllUserBankAccounts
+      responses:
+        '200':
+          description: ''
+    post:
+      tags:
+        - Accounts
+      summary: Create bank account
+      description: Create bank account
+      operationId: createBankAccount
+      responses:
+        '200':
+          description: ''
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: '16'
+tags:
+  - name: Users
+  - name: Accounts

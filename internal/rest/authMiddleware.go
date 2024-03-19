@@ -77,7 +77,7 @@ func JWTMiddleware(log *logrus.Logger, store s.Storer, handlerFunc http.HandlerF
 func CreateJWT(userID int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"userID":    strconv.Itoa(int(userID)),
-		"expiresAt": time.Now().Add(30 * time.Minute).Unix(),
+		"expiresAt": time.Now().Add(3 * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(config.Envs.JWTSecret))
