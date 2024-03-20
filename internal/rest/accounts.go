@@ -2,6 +2,7 @@ package rest
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -98,7 +99,7 @@ func (s *AccountsService) handleDeleteAccount(w http.ResponseWriter, r *http.Req
 	err = s.store.DeleteAccountByID(userID, accountID)
 	if err != nil {
 		s.log.Infof("Failed to delete account: %v", err)
-		if err == t.ErrZeroBalance {
+		if errors.Is(err, t.ErrZeroBalance) {
 			u.WriteJSON(w, http.StatusBadRequest, u.ErrorResponse{Error: "Account balance is not zero"})
 			return
 		}

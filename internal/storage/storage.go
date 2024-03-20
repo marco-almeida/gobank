@@ -21,6 +21,6 @@ type Storer interface {
 	GetAllAccountsByUserID(userID int64) ([]t.Account, error)
 	GetAccountByID(userID int64, accountID int64) (t.Account, error)
 	DeleteAccountByID(userID int64, accountID int64) error
-	// simulates deposit and withdraw, returns rows affected
+	// UpdateAccountBalanceByID simulates deposit and withdraw, returns the new balance
 	UpdateAccountBalanceByID(userID int64, accountID int64, balance t.USD) (t.USD, error)
 }

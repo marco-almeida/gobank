@@ -82,7 +82,7 @@ func (s *PostgresStorage) GetAllUsers() ([]t.User, error) {
 	}
 	defer rows.Close()
 
-	users := []t.User{}
+	var users []t.User
 	for rows.Next() {
 		var u t.User
 		err := rows.Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.CreatedAt)
@@ -178,7 +178,7 @@ func (s *PostgresStorage) GetAllAccountsByUserID(userID int64) ([]t.Account, err
 	}
 	defer rows.Close()
 
-	accounts := []t.Account{}
+	var accounts []t.Account
 	for rows.Next() {
 		var a t.Account
 		err := rows.Scan(&a.ID, &a.UserID, &a.Balance, &a.CreatedAt)

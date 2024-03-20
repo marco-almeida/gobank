@@ -4,7 +4,37 @@ Bank API implemented with Go's http std lib and PostgreSQL.
 
 It is a REST API that allows the creation of users, accounts related to users, deposits, withdrawals, and transfers.
 
-Middleware is used to log requests, responses, handle panics and implement JWT authentication.
+The project is a work in progress and is being developed as a learning experience and to serve as a reference for future projects.
+
+## Features
+
+- [X] User creation
+- [x] Account creation
+- [x] Deposits
+- [x] Withdrawals
+- [ ] Transfers
+
+Technical features:
+
+- [x] Project layout
+- [x] Dependency Injection
+- [x] Authentication (via middleware)
+- [x] Authorization (via middleware)
+- [x] Logging (via middleware)
+- [x] Persistent storage (with PostgreSQL)
+- [x] Pagination
+- [x] Secure configuration
+- [x] OpenAPI 3 documentation
+- [x] Versioning
+- [ ] Database migrations
+- [ ] Caching with Redis/Memcached
+- [ ] Rate limiting
+- [ ] Event streaming along with WebSockets or Server-Sent Events to notify clients of requested actions
+- [ ] Testing (with coverage)
+- [ ] Dockerization (with multi-stage builds)
+- [ ] CI/CD
+- [ ] Monitoring
+- [ ] Graceful shutdown
 
 ## Project Layout
 

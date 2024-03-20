@@ -22,7 +22,7 @@ func main() {
 		panic(err)
 	}
 	logFile := filepath.Join("logs", "main.log")
-	logger := logger.New(logFile, true)
+	l := logger.New(logFile, true)
 
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		config.Envs.PgUser,
@@ -30,13 +30,13 @@ func main() {
 		config.Envs.PgHost,
 		config.Envs.Port,
 		config.Envs.PgDb)
-	storage := storage.NewPostgresStorage(connStr, logger)
+	postgresStorage := storage.NewPostgresStorage(connStr, l)
 
-	err = storage.Init()
+	err = postgresStorage.Init()
 	if err != nil {
-		logger.Fatal(err)
+		l.Fatal(err)
 	}
 
-	server := rest.NewAPIServer(*listenAddr, logger, storage)
+	server := rest.NewAPIServer(*listenAddr, l, postgresStorage)
 	server.Serve()
 }
