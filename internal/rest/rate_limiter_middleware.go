@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -11,7 +10,6 @@ import (
 )
 
 func RateLimiterMiddleware(next http.Handler) http.Handler {
-	fmt.Println("RateLimiterMiddleware")
 	type client struct {
 		limiter  *rate.Limiter
 		lastSeen time.Time

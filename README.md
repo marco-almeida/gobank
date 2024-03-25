@@ -25,15 +25,14 @@ Technical features:
 - [x] Secure configuration
 - [x] OpenAPI 3 documentation
 - [x] Versioning
-- [ ] Pagination
+- [x] Pagination
 - [ ] Database migrations
 - [ ] Caching with Redis/Memcached
-- [X] Rate limiting per user (via middleware)
+- [x] Per user rate limiting (via middleware)
 - [ ] Event streaming along with WebSockets or Server-Sent Events to notify clients of requested actions
 - [ ] Testing (with coverage)
 - [ ] Dockerization (with multi-stage builds)
 - [ ] CI/CD
-- [ ] Monitoring
 - [ ] Graceful shutdown
 
 ## Project Layout

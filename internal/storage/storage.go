@@ -8,7 +8,7 @@ type Storer interface {
 	// users
 
 	CreateUser(u *t.RegisterUserRequest) error
-	GetAllUsers() ([]t.User, error)
+	GetAllUsers(limit, offset int64) ([]t.User, error)
 	DeleteUserByID(int64) error
 	GetUserByEmail(string) (t.User, error)
 	UpdateUserByID(int64, *t.RegisterUserRequest) error
@@ -18,7 +18,7 @@ type Storer interface {
 	// bank accounts
 
 	CreateAccount(userID int64) error
-	GetAllAccountsByUserID(userID int64) ([]t.Account, error)
+	GetAllAccountsByUserID(userID, limit, offset int64) ([]t.Account, error)
 	GetAccountByID(userID int64, accountID int64) (t.Account, error)
 	DeleteAccountByID(userID int64, accountID int64) error
 	// UpdateAccountBalanceByID simulates deposit and withdraw, returns the new balance

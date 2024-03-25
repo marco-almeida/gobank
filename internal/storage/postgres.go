@@ -75,8 +75,8 @@ func (s *PostgresStorage) CreateUser(u *t.RegisterUserRequest) error {
 	return err
 }
 
-func (s *PostgresStorage) GetAllUsers() ([]t.User, error) {
-	rows, err := s.db.Query(`SELECT id, first_name, last_name, email, created_at FROM users`)
+func (s *PostgresStorage) GetAllUsers(limit, offset int64) ([]t.User, error) {
+	rows, err := s.db.Query(`SELECT id, first_name, last_name, email, created_at FROM users OFFSET $1 LIMIT $2`, offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +171,9 @@ func (s *PostgresStorage) CreateAccount(userID int64) error {
 	return err
 }
 
-func (s *PostgresStorage) GetAllAccountsByUserID(userID int64) ([]t.Account, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, balance, created_at FROM accounts WHERE user_id = $1`, userID)
+func (s *PostgresStorage) GetAllAccountsByUserID(userID, offset, limit int64) ([]t.Account, error) {
+	rows, err := s.db.Query(`SELECT id, user_id, balance, created_at FROM accounts WHERE user_id = $1 OFFSET $2 LIMIT $3`, userID, offset, limit)
+
 	if err != nil {
 		return nil, err
 	}

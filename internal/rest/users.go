@@ -151,7 +151,20 @@ func (s *UserService) handleUserDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *UserService) handleGetAllUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := s.store.GetAllUsers()
+	// get limit and offset query params, limit default = 10, offset default = 0
+	limitStr := r.URL.Query().Get("limit")
+	limit, err := strconv.ParseInt(limitStr, 10, 64)
+	if err != nil {
+		limit = 10
+	}
+
+	offsetStr := r.URL.Query().Get("offset")
+	offset, err := strconv.ParseInt(offsetStr, 10, 64)
+	if err != nil {
+		offset = 0
+	}
+
+	users, err := s.store.GetAllUsers(limit, offset)
 	if err != nil {
 		s.log.Errorf("Error getting users: %v", err)
 		u.WriteJSON(w, http.StatusInternalServerError, u.ErrorResponse{Error: "Error getting users"})

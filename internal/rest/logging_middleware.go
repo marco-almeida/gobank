@@ -47,13 +47,12 @@ func LoggingMiddleware(logger *logrus.Logger) func(http.Handler) http.Handler {
 					)
 				}
 			}()
-
-			logger.Infof("%s %s", r.Method, r.URL.EscapedPath())
+			logger.Infof("%s %s", r.Method, r.URL.String())
 
 			start := time.Now()
 			wrapped := wrapResponseWriter(w)
 			next.ServeHTTP(wrapped, r)
-			logger.Infof("%s %s -> %d in %v", r.Method, r.URL.EscapedPath(), wrapped.status, time.Since(start))
+			logger.Infof("%s %s -> %d in %v", r.Method, r.URL.String(), wrapped.status, time.Since(start))
 		}
 
 		return http.HandlerFunc(fn)
