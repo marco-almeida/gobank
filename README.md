@@ -22,13 +22,13 @@ Technical features:
 - [x] Authorization (via middleware)
 - [x] Logging (via middleware)
 - [x] Persistent storage (with PostgreSQL)
-- [x] Pagination
 - [x] Secure configuration
 - [x] OpenAPI 3 documentation
 - [x] Versioning
+- [ ] Pagination
 - [ ] Database migrations
 - [ ] Caching with Redis/Memcached
-- [ ] Rate limiting
+- [X] Rate limiting per user (via middleware)
 - [ ] Event streaming along with WebSockets or Server-Sent Events to notify clients of requested actions
 - [ ] Testing (with coverage)
 - [ ] Dockerization (with multi-stage builds)

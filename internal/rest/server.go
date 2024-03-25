@@ -2,6 +2,7 @@ package rest
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/marco-almeida/gobank/internal/storage"
 	"github.com/sirupsen/logrus"
@@ -22,17 +23,22 @@ func NewAPIServer(addr string, logger *logrus.Logger, store storage.Storer) *API
 }
 
 func (s *APIServer) Serve() {
-	router := http.NewServeMux()
+	srv := &http.Server{
+		Addr:         s.addr,
+		Handler:      http.NewServeMux(),
+		ReadTimeout:  time.Hour,
+		WriteTimeout: time.Hour,
+	}
 
 	userService := NewUserService(s.log, s.store)
-	userService.RegisterRoutes(router)
+	userService.RegisterRoutes(srv.Handler.(*http.ServeMux))
 
 	accountsService := NewAccountsService(s.log, s.store)
-	accountsService.RegisterRoutes(router)
+	accountsService.RegisterRoutes(srv.Handler.(*http.ServeMux))
 
 	s.log.Info("Starting the API server at", s.addr)
 	loggingMiddleware := LoggingMiddleware(s.log)
-	loggedRouter := loggingMiddleware(router)
+	srv.Handler = loggingMiddleware(RateLimiterMiddleware(srv.Handler))
 
-	s.log.Fatal(http.ListenAndServe(s.addr, loggedRouter))
+	s.log.Fatal(srv.ListenAndServe())
 }

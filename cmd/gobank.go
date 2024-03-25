@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,9 +12,6 @@ import (
 )
 
 func main() {
-	listenAddr := flag.String("listen-addr", ":3000", "server listen address")
-	flag.Parse()
-
 	// set up logging
 	err := os.MkdirAll("logs", os.ModePerm)
 	if err != nil {
@@ -37,6 +33,6 @@ func main() {
 		l.Fatal(err)
 	}
 
-	server := rest.NewAPIServer(*listenAddr, l, postgresStorage)
+	server := rest.NewAPIServer(":3000", l, postgresStorage)
 	server.Serve()
 }
