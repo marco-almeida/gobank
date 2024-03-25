@@ -149,6 +149,17 @@ paths:
       summary: Get all users
       description: Get all users
       operationId: getAllUsers
+      parameters:
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          description: The number of items to skip before starting to collect the result set
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          description: The numbers of items to return
       responses:
         '200':
           description: ''
@@ -223,6 +234,17 @@ paths:
       tags:
         - Accounts
       summary: Get all user bank accounts
+      parameters:
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          description: The number of items to skip before starting to collect the result set
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          description: The numbers of items to return
       description: Get all user bank accounts
       operationId: getAllUserBankAccounts
       responses:
