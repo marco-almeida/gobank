@@ -88,8 +88,8 @@ If running the API locally, execute the following command:
 make run
 ```
 
-Access the API at `http://localhost:3000`.
+Access the API at <http://localhost:3000>.
 
 ## Documentation
 
-OpenAPI 3 documentation is available at `https://github.com/marco-almeida/gobank/blob/main/api/openapi.yaml`.
+OpenAPI 3 documentation is available at <https://github.com/marco-almeida/gobank/blob/main/api/openapi.yaml>.
