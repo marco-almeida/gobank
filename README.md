@@ -26,14 +26,13 @@ Technical features:
 - [x] OpenAPI 3 documentation
 - [x] Versioning
 - [x] Pagination
-- [ ] Database migrations
-- [ ] Caching with Redis/Memcached
 - [x] Per user rate limiting (via middleware)
+- [x] Dockerization (with multi-stage builds)
+- [x] Graceful shutdown
+- [ ] Database migrations
 - [ ] Event streaming along with WebSockets or Server-Sent Events to notify clients of requested actions
-- [ ] Testing (with coverage)
-- [ ] Dockerization (with multi-stage builds)
-- [ ] CI/CD
-- [ ] Graceful shutdown
+- [ ] Caching with Redis/Memcached
+- [ ] Testing (with coverage) triggered by CI/CD
 
 ## Project Layout
 
@@ -53,13 +52,21 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
 - `configs`: Configuration file templates or default configs.
 - `deploy`: IaaS, PaaS, system and container orchestration deployment configurations and templates.
 
-## Requirements
-
-- Go 1.22.0 or higher
-- Make
-- Docker
-
 ## Getting Started
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+
+#### Run locally
+
+If you want to run the API locally, you will need the following:
+
+- [Go 1.22.x](https://golang.org/dl/)
+- [Make](https://www.gnu.org/software/make/)
+
+### Steps
 
 1. Clone the repository.
 
@@ -69,14 +76,20 @@ git clone https://github.com/marco-almeida/gobank.git
 
 2. Set the environment variables in the `configs/.env` file according to the template in `configs/example.env`.
 
-3. Run the database.
+3. Run the containers.
 
 ```sh
-docker compose -f deploy/docker-compose.yml --env-file configs/.env up -d
+docker compose -f ./deploy/docker-compose.yml --env-file ./configs/.env up # --build if needed for a new image, -d for detached mode
 ```
 
-4. Run the application.
+If running the API locally, execute the following command:
 
 ```sh
 make run
 ```
+
+Access the API at `http://localhost:3000`.
+
+## Documentation
+
+OpenAPI 3 documentation is available at `https://github.com/marco-almeida/gobank/blob/main/api/openapi.yaml`.

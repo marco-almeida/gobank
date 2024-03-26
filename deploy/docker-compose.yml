@@ -3,21 +3,36 @@ services:
   postgres:
     image: postgres:16
     restart: always
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - ../configs/.env
     ports:
       - ${POSTGRES_PORT}:5432
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready", "-d", "${POSTGRES_DB}" ]
-      interval: 1s
-      timeout: 5s
-      retries: 10
     networks:
       - gobank
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}" ]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+
+  gobank:
+    container_name: gobank
+    image: gobank:latest
+    ports:
+      - 3000:3000
+    networks:
+      - gobank
+    build:
+      context: ../
+      dockerfile: ./build/package/alpine.Dockerfile
+    volumes:
+      - ../configs:/app/configs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
 
 networks:
   gobank:
