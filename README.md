@@ -26,7 +26,7 @@ Technical features:
 - [x] OpenAPI 3 documentation
 - [x] Versioning
 - [x] Pagination
-- [x] Per user rate limiting (via middleware)
+- [x] Per-user rate limiting (via middleware)
 - [x] Dockerization (with multi-stage builds)
 - [x] Graceful shutdown
 - [ ] Database migrations
