@@ -30,6 +30,7 @@ services:
       dockerfile: ./build/package/gobank/alpine.Dockerfile
     volumes:
       - ../configs:/app/configs
+      - ../logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
