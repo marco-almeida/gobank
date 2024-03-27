@@ -82,8 +82,8 @@ func (h *UserHandler) handleUserRegister(w http.ResponseWriter, r *http.Request)
 	})
 
 	if err != nil {
-		// return error response according to the error
-
+		WriteErrorResponse(w, r, "error creating user", err)
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)

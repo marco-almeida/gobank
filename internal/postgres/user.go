@@ -2,7 +2,10 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 
+	"github.com/lib/pq"
+	"github.com/marco-almeida/gobank/internal"
 	"github.com/marco-almeida/gobank/internal/model"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -59,6 +62,18 @@ func (s *User) Create(u *model.User) error {
 	}
 
 	_, err = s.db.Exec(`INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, $4)`, u.FirstName, u.LastName, u.Email, string(hashedPassword))
+
+	if err != nil {
+		var pgErr *pq.Error
+		// check if error of type duplicate key
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return internal.WrapErrorf(err, internal.ErrorCodeDuplicate, "email already in use")
+			}
+		}
+
+		return internal.WrapErrorf(err, internal.ErrorCodeUnknown, "create user")
+	}
 
 	return err
 }

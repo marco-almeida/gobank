@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/lib/pq"
 	"github.com/marco-almeida/gobank/internal/model"
 	"github.com/sirupsen/logrus"
 )
@@ -40,26 +39,7 @@ func (s *User) Get(id int64) (model.User, error) {
 }
 
 func (s *User) Create(user model.User) error {
-	err := s.repo.Create(&user)
-
-	if err != nil {
-		// h.svc.log.Infof("Error creating user: %v", err)
-		// check if error of type duplicate key
-		pgErr, ok := err.(*pq.Error)
-		if !ok {
-			// WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error creating user"})
-			return err
-		}
-		if ok && pgErr.Code == "23505" {
-			// WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "email address is already in use"})
-			return err
-		}
-
-		// WriteJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Error creating user"})
-		return err
-
-	}
-	return err
+	return s.repo.Create(&user)
 }
 
 func (s *User) Delete(id int64) error {

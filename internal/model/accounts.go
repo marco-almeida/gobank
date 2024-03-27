@@ -1,12 +1,13 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
 
-var ErrZeroBalance = fmt.Errorf("account balance is zero")
-var ErrAccountNotFound = fmt.Errorf("account not found")
+var ErrZeroBalance = errors.New("account balance is zero")
+var ErrAccountNotFound = errors.New("account not found")
 
 type BalanceUpdateRequest struct {
 	Amount USD `json:"amount"`
