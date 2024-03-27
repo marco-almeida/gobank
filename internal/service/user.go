@@ -2,43 +2,45 @@ package service
 
 import (
 	"github.com/lib/pq"
-	"github.com/marco-almeida/gobank/internal/storage"
-	"github.com/marco-almeida/gobank/internal/types"
+	"github.com/marco-almeida/gobank/internal/model"
 	"github.com/sirupsen/logrus"
 )
 
-// UsersService ...
-type UsersService interface {
-	GetAll(limit, offset int64) ([]types.User, error)
-	Get(id int64) (types.User, error)
-	Create(user types.User) error
-	Delete(id int64) error
-	Update(id int64, user types.User) (types.User, error)
-	PartialUpdate(id int64, user types.User) (types.User, error)
+// UserRepository defines the methods that any User repository should implement.
+type UserRepository interface {
+	Create(u *model.User) error
+	GetAll(limit, offset int64) ([]model.User, error)
+	DeleteByID(int64) error
+	GetByEmail(string) (model.User, error)
+	UpdateByID(int64, *model.User) error
+	PartialUpdateByID(int64, *model.User) error
+	GetByID(int64) (model.User, error)
 }
 
-type usersService struct {
-	store storage.UserStore
-	log   *logrus.Logger
+// User defines the application service in charge of interacting with Users.
+type User struct {
+	repo UserRepository
+	log  *logrus.Logger
 }
 
-func NewUsers(store storage.UserStore, log *logrus.Logger) UsersService {
-	return &usersService{
-		store: store,
-		log:   log,
+// NewUsers creates a new User service.
+func NewUser(repo UserRepository, log *logrus.Logger) *User {
+	return &User{
+		repo: repo,
+		log:  log,
 	}
 }
 
-func (s *usersService) GetAll(limit, offset int64) ([]types.User, error) {
-	return s.store.GetAll(limit, offset)
+func (s *User) GetAll(limit, offset int64) ([]model.User, error) {
+	return s.repo.GetAll(limit, offset)
 }
 
-func (s *usersService) Get(id int64) (types.User, error) {
-	return s.store.GetByID(id)
+func (s *User) Get(id int64) (model.User, error) {
+	return s.repo.GetByID(id)
 }
 
-func (s *usersService) Create(user types.User) error {
-	err := s.store.Create(&user)
+func (s *User) Create(user model.User) error {
+	err := s.repo.Create(&user)
 
 	if err != nil {
 		// h.svc.log.Infof("Error creating user: %v", err)
@@ -60,14 +62,14 @@ func (s *usersService) Create(user types.User) error {
 	return err
 }
 
-func (s *usersService) Delete(id int64) error {
-	return s.store.DeleteByID(id)
+func (s *User) Delete(id int64) error {
+	return s.repo.DeleteByID(id)
 }
 
-func (s *usersService) Update(id int64, user types.User) (types.User, error) {
-	return user, s.store.UpdateByID(id, &user)
+func (s *User) Update(id int64, user model.User) (model.User, error) {
+	return user, s.repo.UpdateByID(id, &user)
 }
 
-func (s *usersService) PartialUpdate(id int64, user types.User) (types.User, error) {
-	return user, s.store.PartialUpdateByID(id, &user)
+func (s *User) PartialUpdate(id int64, user model.User) (model.User, error) {
+	return user, s.repo.PartialUpdateByID(id, &user)
 }

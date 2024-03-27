@@ -12,15 +12,14 @@ import (
 
 	config "github.com/marco-almeida/gobank/configs"
 	"github.com/marco-almeida/gobank/internal/handler"
+	"github.com/marco-almeida/gobank/internal/postgres"
 	"github.com/marco-almeida/gobank/internal/service"
-	"github.com/marco-almeida/gobank/internal/storage"
 	"github.com/sirupsen/logrus"
 )
 
 type APIServer struct {
-	addr  string
-	log   *logrus.Logger
-	store storage.Storer
+	addr string
+	log  *logrus.Logger
 }
 
 func NewAPIServer(addr string, logger *logrus.Logger) *APIServer {
@@ -52,14 +51,14 @@ func (s *APIServer) Serve() {
 		config.Envs.PgHost,
 		config.Envs.Port,
 		config.Envs.PgDb)
-	usersPostgresStorage := storage.NewUsersPostgresStorage(connStr, s.log)
+	usersPostgresStorage := postgres.NewUser(connStr, s.log)
 
 	err := usersPostgresStorage.Init()
 	if err != nil {
 		s.log.Fatal(err)
 	}
 
-	usersService := service.NewUsers(usersPostgresStorage, s.log)
+	usersService := service.NewUser(usersPostgresStorage, s.log)
 	handler.NewUser(usersService).RegisterRoutes(srv.Handler.(*http.ServeMux))
 
 	s.log.Info("Starting the API server at", s.addr)

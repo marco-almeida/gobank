@@ -5,29 +5,27 @@ import (
 	"errors"
 	"net/http"
 	"reflect"
-	"time"
 
-	"github.com/marco-almeida/gobank/internal/service"
-	"github.com/marco-almeida/gobank/internal/types"
+	"github.com/marco-almeida/gobank/internal/model"
 )
 
-// UserService ...
+// UserService defines the methods that the user handler will use
 type UserService interface {
-	GetAll(limit, offset int64) ([]types.User, error)
-	Get(id int64) (types.User, error)
-	Create(user types.User) (types.User, error)
+	GetAll(limit, offset int64) ([]model.User, error)
+	Get(id int64) (model.User, error)
+	Create(user model.User) error
 	Delete(id int64) error
-	Update(id int64, user types.User) (types.User, error)
-	PartialUpdate(id int64, user types.User) (types.User, error)
+	Update(id int64, user model.User) (model.User, error)
+	PartialUpdate(id int64, user model.User) (model.User, error)
 }
 
-// UserHandler ...
+// UserHandler is the handler for the user service
 type UserHandler struct {
-	svc service.UsersService
+	svc UserService
 }
 
-// NewUser ...
-func NewUser(svc service.UsersService) *UserHandler {
+// NewUser creates a new user handler
+func NewUser(svc UserService) *UserHandler {
 	return &UserHandler{
 		svc: svc,
 	}
@@ -64,15 +62,6 @@ func (r *RegisterUserRequest) Validate() error {
 	return nil
 }
 
-type User struct {
-	ID        int64     `json:"id"`
-	FirstName string    `json:"firstName"`
-	LastName  string    `json:"lastName"`
-	Email     string    `json:"email"`
-	Password  string    `json:"-"`
-	CreatedAt time.Time `json:"-"`
-}
-
 func (h *UserHandler) handleUserRegister(w http.ResponseWriter, r *http.Request) {
 	var payload RegisterUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -85,7 +74,7 @@ func (h *UserHandler) handleUserRegister(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err := h.svc.Create(types.User{
+	err := h.svc.Create(model.User{
 		FirstName: payload.FirstName,
 		LastName:  payload.LastName,
 		Email:     payload.Email,
