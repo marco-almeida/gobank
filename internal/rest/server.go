@@ -3,12 +3,16 @@ package rest
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	config "github.com/marco-almeida/gobank/configs"
+	"github.com/marco-almeida/gobank/internal/handler"
+	"github.com/marco-almeida/gobank/internal/service"
 	"github.com/marco-almeida/gobank/internal/storage"
 	"github.com/sirupsen/logrus"
 )
@@ -19,29 +23,44 @@ type APIServer struct {
 	store storage.Storer
 }
 
-func NewAPIServer(addr string, logger *logrus.Logger, store storage.Storer) *APIServer {
+func NewAPIServer(addr string, logger *logrus.Logger) *APIServer {
 	return &APIServer{
-		addr:  addr,
-		log:   logger,
-		store: store,
+		addr: addr,
+		log:  logger,
 	}
 }
 
 func (s *APIServer) Serve() {
 	srv := &http.Server{
-		Addr:         s.addr,
-		Handler:      http.NewServeMux(),
-		ReadTimeout:  time.Hour,
-		WriteTimeout: time.Hour,
+		Addr:              s.addr,
+		Handler:           http.NewServeMux(),
+		ReadTimeout:       time.Hour,
+		WriteTimeout:      time.Hour,
 		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:  time.Hour,
+		IdleTimeout:       time.Hour,
 	}
 
-	userService := NewUserService(s.log, s.store)
-	userService.RegisterRoutes(srv.Handler.(*http.ServeMux))
+	// userService := NewUserService(s.log, s.store)
+	// userService.RegisterRoutes(srv.Handler.(*http.ServeMux))
 
-	accountsService := NewAccountsService(s.log, s.store)
-	accountsService.RegisterRoutes(srv.Handler.(*http.ServeMux))
+	// accountsService := NewAccountsService(s.log, s.store)
+	// accountsService.RegisterRoutes(srv.Handler.(*http.ServeMux))
+
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		config.Envs.PgUser,
+		config.Envs.PgPassword,
+		config.Envs.PgHost,
+		config.Envs.Port,
+		config.Envs.PgDb)
+	usersPostgresStorage := storage.NewUsersPostgresStorage(connStr, s.log)
+
+	err := usersPostgresStorage.Init()
+	if err != nil {
+		s.log.Fatal(err)
+	}
+
+	usersService := service.NewUsers(usersPostgresStorage, s.log)
+	handler.NewUser(usersService).RegisterRoutes(srv.Handler.(*http.ServeMux))
 
 	s.log.Info("Starting the API server at", s.addr)
 	loggingMiddleware := LoggingMiddleware(s.log)

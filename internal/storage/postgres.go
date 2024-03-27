@@ -1,68 +1,69 @@
 package storage
 
 import (
-	"database/sql"
+	// "database/sql"
 
 	_ "github.com/lib/pq"
 	t "github.com/marco-almeida/gobank/internal/types"
-	"github.com/sirupsen/logrus"
+
+	// "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type PostgresStorage struct {
-	log *logrus.Logger
-	db  *sql.DB
-}
+// type UsersPostgresStorage struct {
+// 	log *logrus.Logger
+// 	db  *sql.DB
+// }
 
-func NewPostgresStorage(connStr string, log *logrus.Logger) *PostgresStorage {
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
-	}
+// func UsersNewPostgresStorage(connStr string, log *logrus.Logger) *UsersPostgresStorage {
+// 	db, err := sql.Open("postgres", connStr)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	err = db.Ping()
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-	log.Info("Connected to Postgres")
+// 	log.Info("Connected to Postgres")
 
-	return &PostgresStorage{log: log, db: db}
-}
+// 	return &UsersPostgresStorage{log: log, db: db}
+// }
 
-func (s *PostgresStorage) Init() error {
-	err := s.createUsersTable()
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// func (s *UsersPostgresStorage) Init() error {
+// 	err := s.createUsersTable()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
-func (s *PostgresStorage) createUsersTable() error {
-	_, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS users (
-		id BIGSERIAL PRIMARY KEY NOT NULL,
-		first_name TEXT NOT NULL,
-		last_name TEXT NOT NULL,
-		email TEXT NOT NULL UNIQUE,
-		password TEXT NOT NULL,
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-	)`)
+// func (s *UsersPostgresStorage) createUsersTable() error {
+// 	_, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS users (
+// 		id BIGSERIAL PRIMARY KEY NOT NULL,
+// 		first_name TEXT NOT NULL,
+// 		last_name TEXT NOT NULL,
+// 		email TEXT NOT NULL UNIQUE,
+// 		password TEXT NOT NULL,
+// 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+// 	)`)
 
-	if err != nil {
-		return err
-	}
+// 	if err != nil {
+// 		return err
+// 	}
 
-	_, err = s.db.Exec(`CREATE TABLE IF NOT EXISTS accounts (
-		id BIGSERIAL PRIMARY KEY NOT NULL,
-		user_id BIGINT NOT NULL,
-		balance BIGINT NOT NULL DEFAULT 0,
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-	)`)
+// 	_, err = s.db.Exec(`CREATE TABLE IF NOT EXISTS accounts (
+// 		id BIGSERIAL PRIMARY KEY NOT NULL,
+// 		user_id BIGINT NOT NULL,
+// 		balance BIGINT NOT NULL DEFAULT 0,
+// 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+// 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+// 	)`)
 
-	return err
-}
+// 	return err
+// }
 
-func (s *PostgresStorage) CreateUser(u *t.RegisterUserRequest) error {
+func (s *UsersPostgresStorage) CreateUser(u *t.RegisterUserRequest) error {
 	// Hashing the password with the default cost of 10
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -75,7 +76,7 @@ func (s *PostgresStorage) CreateUser(u *t.RegisterUserRequest) error {
 	return err
 }
 
-func (s *PostgresStorage) GetAllUsers(limit, offset int64) ([]t.User, error) {
+func (s *UsersPostgresStorage) GetAllUsers(limit, offset int64) ([]t.User, error) {
 	rows, err := s.db.Query(`SELECT id, first_name, last_name, email, created_at FROM users OFFSET $1 LIMIT $2`, offset, limit)
 	if err != nil {
 		return nil, err
@@ -94,12 +95,12 @@ func (s *PostgresStorage) GetAllUsers(limit, offset int64) ([]t.User, error) {
 	return users, nil
 }
 
-func (s *PostgresStorage) DeleteUserByID(id int64) error {
+func (s *UsersPostgresStorage) DeleteUserByID(id int64) error {
 	_, err := s.db.Exec(`DELETE FROM users WHERE id = $1`, id)
 	return err
 }
 
-func (s *PostgresStorage) GetUserByEmail(email string) (t.User, error) {
+func (s *UsersPostgresStorage) GetUserByEmail(email string) (t.User, error) {
 	var u t.User
 	err := s.db.QueryRow(`SELECT id, email, password FROM users WHERE email = $1`, email).Scan(&u.ID, &u.Email, &u.Password)
 	if err != nil {
@@ -108,7 +109,7 @@ func (s *PostgresStorage) GetUserByEmail(email string) (t.User, error) {
 	return u, nil
 }
 
-func (s *PostgresStorage) UpdateUserByID(id int64, u *t.RegisterUserRequest) error {
+func (s *UsersPostgresStorage) UpdateUserByID(id int64, u *t.RegisterUserRequest) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -118,7 +119,7 @@ func (s *PostgresStorage) UpdateUserByID(id int64, u *t.RegisterUserRequest) err
 	return err
 }
 
-func (s *PostgresStorage) PartialUpdateUserByID(id int64, u *t.RegisterUserRequest) error {
+func (s *UsersPostgresStorage) PartialUpdateUserByID(id int64, u *t.RegisterUserRequest) error {
 	// only update fields that are not empty
 	if u.FirstName != "" {
 		_, err := s.db.Exec(`UPDATE users SET first_name = $1 WHERE id = $2`, u.FirstName, id)
@@ -155,7 +156,7 @@ func (s *PostgresStorage) PartialUpdateUserByID(id int64, u *t.RegisterUserReque
 	return nil
 }
 
-func (s *PostgresStorage) GetUserByID(id int64) (t.User, error) {
+func (s *UsersPostgresStorage) GetUserByID(id int64) (t.User, error) {
 	var u t.User
 	err := s.db.QueryRow(`SELECT id, first_name, last_name, email, created_at FROM users WHERE id = $1`, id).Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.CreatedAt)
 	if err != nil {
@@ -166,12 +167,12 @@ func (s *PostgresStorage) GetUserByID(id int64) (t.User, error) {
 
 // accounts
 
-func (s *PostgresStorage) CreateAccount(userID int64) error {
+func (s *UsersPostgresStorage) CreateAccount(userID int64) error {
 	_, err := s.db.Exec(`INSERT INTO accounts (user_id) VALUES ($1)`, userID)
 	return err
 }
 
-func (s *PostgresStorage) GetAllAccountsByUserID(userID, offset, limit int64) ([]t.Account, error) {
+func (s *UsersPostgresStorage) GetAllAccountsByUserID(userID, offset, limit int64) ([]t.Account, error) {
 	rows, err := s.db.Query(`SELECT id, user_id, balance, created_at FROM accounts WHERE user_id = $1 OFFSET $2 LIMIT $3`, userID, offset, limit)
 
 	if err != nil {
@@ -191,7 +192,7 @@ func (s *PostgresStorage) GetAllAccountsByUserID(userID, offset, limit int64) ([
 	return accounts, nil
 }
 
-func (s *PostgresStorage) GetAccountByID(userID int64, accountID int64) (t.Account, error) {
+func (s *UsersPostgresStorage) GetAccountByID(userID int64, accountID int64) (t.Account, error) {
 	var a t.Account
 	err := s.db.QueryRow(`SELECT id, user_id, balance, created_at FROM accounts WHERE user_id = $1 AND id = $2`, userID, accountID).Scan(&a.ID, &a.UserID, &a.Balance, &a.CreatedAt)
 	if err != nil {
@@ -200,7 +201,7 @@ func (s *PostgresStorage) GetAccountByID(userID int64, accountID int64) (t.Accou
 	return a, nil
 }
 
-func (s *PostgresStorage) DeleteAccountByID(userID int64, accountID int64) error {
+func (s *UsersPostgresStorage) DeleteAccountByID(userID int64, accountID int64) error {
 	// first check if account exists and its balance is 0
 	var balance t.USD
 	err := s.db.QueryRow(`SELECT balance FROM accounts WHERE user_id = $1 AND id = $2`, userID, accountID).Scan(&balance)
@@ -215,7 +216,7 @@ func (s *PostgresStorage) DeleteAccountByID(userID int64, accountID int64) error
 	return err
 }
 
-func (s *PostgresStorage) UpdateAccountBalanceByID(userID int64, accountID int64, balance t.USD) (t.USD, error) {
+func (s *UsersPostgresStorage) UpdateAccountBalanceByID(userID int64, accountID int64, balance t.USD) (t.USD, error) {
 	var newBalance t.USD
 	err := s.db.QueryRow(`UPDATE accounts SET balance = balance + $1 WHERE user_id = $2 AND id = $3 RETURNING balance`, balance, userID, accountID).Scan(&newBalance)
 	if err != nil {
