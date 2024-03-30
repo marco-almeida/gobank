@@ -23,16 +23,16 @@ const (
 )
 
 // WrapErrorf returns a wrapped error.
-func WrapErrorf(orig error, code ErrorCode, format string, a ...interface{}) error {
+func WrapErrorf(orig error, code ErrorCode, format string, a ...any) error {
 	return &Error{
-		code: code,
 		orig: orig,
+		code: code,
 		msg:  fmt.Sprintf(format, a...),
 	}
 }
 
 // NewErrorf instantiates a new error.
-func NewErrorf(code ErrorCode, format string, a ...interface{}) error {
+func NewErrorf(code ErrorCode, format string, a ...any) error {
 	return WrapErrorf(nil, code, format, a...)
 }
 

@@ -8,7 +8,6 @@ import (
 	"github.com/marco-almeida/gobank/internal"
 	"github.com/marco-almeida/gobank/internal/model"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // User represents the repository used for interacting with User records.
@@ -55,13 +54,7 @@ func (s *User) createTable() error {
 }
 
 func (s *User) Create(u *model.User) error {
-	// Hashing the password with the default cost of 10
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
-	_, err = s.db.Exec(`INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, $4)`, u.FirstName, u.LastName, u.Email, string(hashedPassword))
+	_, err := s.db.Exec(`INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, $4)`, u.FirstName, u.LastName, u.Email, u.Password)
 
 	if err != nil {
 		var pgErr *pq.Error

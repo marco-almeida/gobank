@@ -91,7 +91,7 @@ func CreateJWT(userID int64) (string, error) {
 func validateJWT(tokenString string) (*jwt.Token, error) {
 	secret := config.Envs.JWTSecret
 
-	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	return jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}

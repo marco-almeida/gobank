@@ -38,6 +38,8 @@ func (s *APIServer) Serve() {
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       time.Hour,
 	}
+	// add /api prefix to all routes
+	srv.Handler.(*http.ServeMux).Handle("/api/", http.StripPrefix("/api", srv.Handler))
 
 	// userService := NewUserService(s.log, s.store)
 	// userService.RegisterRoutes(srv.Handler.(*http.ServeMux))
@@ -51,15 +53,15 @@ func (s *APIServer) Serve() {
 		config.Envs.PgHost,
 		config.Envs.Port,
 		config.Envs.PgDb)
-	usersPostgresStorage := postgres.NewUser(connStr, s.log)
+	userPostgresStorage := postgres.NewUser(connStr, s.log)
 
-	err := usersPostgresStorage.Init()
+	err := userPostgresStorage.Init()
 	if err != nil {
 		s.log.Fatal(err)
 	}
 
-	usersService := service.NewUser(usersPostgresStorage, s.log)
-	handler.NewUser(usersService).RegisterRoutes(srv.Handler.(*http.ServeMux))
+	userService := service.NewUser(userPostgresStorage, s.log)
+	handler.NewUser(userService, s.log).RegisterRoutes(srv.Handler.(*http.ServeMux))
 
 	s.log.Info("Starting the API server at", s.addr)
 	loggingMiddleware := LoggingMiddleware(s.log)
