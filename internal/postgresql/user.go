@@ -6,37 +6,22 @@ import (
 
 	"github.com/lib/pq"
 	"github.com/marco-almeida/gobank/internal"
-	"github.com/sirupsen/logrus"
 )
 
 // User represents the repository used for interacting with User records.
 type User struct {
-	log *logrus.Logger
-	db  *sql.DB
+	db *sql.DB
 }
 
 // NewUser instantiates the User repository.
-func NewUser(connStr string, log *logrus.Logger) *User {
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal(err)
+func NewUser(db *sql.DB) *User {
+	return &User{
+		db: db,
 	}
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Info("Connected to Postgres")
-
-	return &User{log: log, db: db}
 }
 
 func (s *User) Init() error {
-	err := s.createTable()
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.createTable()
 }
 
 func (s *User) createTable() error {

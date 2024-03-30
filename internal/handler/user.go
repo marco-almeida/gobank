@@ -79,15 +79,15 @@ func (h *UserHandler) handleUserRegister(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		h.log.Errorf("error creating user: %v", err)
 		var ierr *internal.Error
-		if !errors.As(err, &ierr) {
-			WriteErrorResponse(w, r, "error creating user", err)
-			return
-		}
 		// let user know if the email is already in use
-		if ierr.Code() == internal.ErrorCodeDuplicate {
-			WriteErrorResponse(w, r, ierr.Message(), ierr)
-			return
+		if errors.As(err, &ierr) {
+			if ierr.Code() == internal.ErrorCodeDuplicate {
+				WriteErrorResponse(w, r, ierr.Message(), ierr)
+				return
+			}
 		}
+		WriteErrorResponse(w, r, "error creating user", err)
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
