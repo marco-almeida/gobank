@@ -8,6 +8,7 @@ import (
 // triggered the error.
 type Error struct {
 	orig error
+	// user friendly message
 	msg  string
 	code ErrorCode
 }
@@ -42,6 +43,10 @@ func (e *Error) Error() string {
 		return fmt.Sprintf("%s: %v", e.msg, e.orig)
 	}
 
+	return e.msg
+}
+
+func (e *Error) Message() string {
 	return e.msg
 }
 

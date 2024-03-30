@@ -6,7 +6,6 @@ import (
 
 	"github.com/lib/pq"
 	"github.com/marco-almeida/gobank/internal"
-	"github.com/marco-almeida/gobank/internal/model"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,7 +52,7 @@ func (s *User) createTable() error {
 	return err
 }
 
-func (s *User) Create(u *model.User) error {
+func (s *User) Create(u *internal.User) error {
 	_, err := s.db.Exec(`INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, $4)`, u.FirstName, u.LastName, u.Email, u.Password)
 
 	if err != nil {
@@ -71,7 +70,7 @@ func (s *User) Create(u *model.User) error {
 	return err
 }
 
-func (s *User) GetAll(limit, offset int64) ([]model.User, error) {
+func (s *User) GetAll(limit, offset int64) ([]internal.User, error) {
 	return nil, nil
 }
 
@@ -79,16 +78,16 @@ func (s *User) DeleteByID(int64) error {
 	return nil
 }
 
-func (s *User) GetByEmail(string) (model.User, error) {
-	return model.User{}, nil
+func (s *User) GetByEmail(string) (internal.User, error) {
+	return internal.User{}, nil
 }
 
-func (s *User) UpdateByID(int64, *model.User) error {
+func (s *User) UpdateByID(int64, *internal.User) error {
 	return nil
 }
-func (s *User) PartialUpdateByID(int64, *model.User) error {
+func (s *User) PartialUpdateByID(int64, *internal.User) error {
 	return nil
 }
-func (s *User) GetByID(int64) (model.User, error) {
-	return model.User{}, nil
+func (s *User) GetByID(int64) (internal.User, error) {
+	return internal.User{}, nil
 }

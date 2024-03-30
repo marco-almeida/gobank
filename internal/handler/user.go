@@ -4,21 +4,24 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"reflect"
 
-	"github.com/marco-almeida/gobank/internal/model"
+	"github.com/go-playground/validator/v10"
+	"github.com/marco-almeida/gobank/internal"
 	"github.com/sirupsen/logrus"
 )
 
 // UserService defines the methods that the user handler will use
 type UserService interface {
-	GetAll(limit, offset int64) ([]model.User, error)
-	Get(id int64) (model.User, error)
-	Create(user model.User) error
+	GetAll(limit, offset int64) ([]internal.User, error)
+	Get(id int64) (internal.User, error)
+	Create(user internal.User) error
 	Delete(id int64) error
-	Update(id int64, user model.User) (model.User, error)
-	PartialUpdate(id int64, user model.User) (model.User, error)
+	Update(id int64, user internal.User) (internal.User, error)
+	PartialUpdate(id int64, user internal.User) (internal.User, error)
 }
+
+// use a single instance of Validate, it caches struct info
+var validate *validator.Validate = validator.New(validator.WithRequiredStructEnabled())
 
 // UserHandler is the handler for the user service
 type UserHandler struct {
@@ -47,37 +50,26 @@ func (h *UserHandler) RegisterRoutes(r *http.ServeMux) {
 
 // RegisterUserRequest defines the request payload for registering a new user
 type RegisterUserRequest struct {
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-}
-
-func (r *RegisterUserRequest) Validate() error {
-	// iterate over struct fields
-	val := reflect.ValueOf(r).Elem()
-	for i := 0; i < val.NumField(); i++ {
-		// if attribute value is empty, return error
-		if val.Field(i).Interface() == "" {
-			return errors.New(val.Type().Field(i).Tag.Get("json") + " is required")
-		}
-	}
-	return nil
+	FirstName string `json:"firstName" validate:"required"`
+	LastName  string `json:"lastName" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
+	Password  string `json:"password" validate:"required,min=8,max=64"`
 }
 
 func (h *UserHandler) handleUserRegister(w http.ResponseWriter, r *http.Request) {
 	var payload RegisterUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload"})
+		WriteErrorResponse(w, r, "error decoding payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "error decoding payload"))
 		return
 	}
 
-	if err := payload.Validate(); err != nil {
-		WriteJSON(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+	if err := validate.Struct(payload); err != nil {
+		h.log.Errorf("error validating payload: %v", err)
+		WriteErrorResponse(w, r, "invalid payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid payload"))
 		return
 	}
 
-	err := h.svc.Create(model.User{
+	err := h.svc.Create(internal.User{
 		FirstName: payload.FirstName,
 		LastName:  payload.LastName,
 		Email:     payload.Email,
@@ -85,9 +77,17 @@ func (h *UserHandler) handleUserRegister(w http.ResponseWriter, r *http.Request)
 	})
 
 	if err != nil {
-		WriteErrorResponse(w, r, "error creating user", err)
 		h.log.Errorf("error creating user: %v", err)
-		return
+		var ierr *internal.Error
+		if !errors.As(err, &ierr) {
+			WriteErrorResponse(w, r, "error creating user", err)
+			return
+		}
+		// let user know if the email is already in use
+		if ierr.Code() == internal.ErrorCodeDuplicate {
+			WriteErrorResponse(w, r, ierr.Message(), ierr)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)

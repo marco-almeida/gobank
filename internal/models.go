@@ -1,10 +1,19 @@
-package model
+package internal
 
 import (
 	"errors"
 	"fmt"
 	"time"
 )
+
+type User struct {
+	ID        int64     `json:"id"`
+	FirstName string    `json:"firstName"`
+	LastName  string    `json:"lastName"`
+	Email     string    `json:"email"`
+	Password  string    `json:"-"`
+	CreatedAt time.Time `json:"omitempty"`
+}
 
 var ErrZeroBalance = errors.New("account balance is zero")
 var ErrAccountNotFound = errors.New("account not found")

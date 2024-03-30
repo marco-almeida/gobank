@@ -5,11 +5,13 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/marco-almeida/gobank/internal"
 )
 
 type ErrorResponse struct {
-	Error string `json:"error,omitempty"`
+	Error       string         `json:"error,omitempty"`
+	Validations map[string]any `json:"validations,omitempty"`
 }
 
 func WriteJSON(w http.ResponseWriter, status int, v any) {
@@ -23,21 +25,21 @@ func WriteErrorResponse(w http.ResponseWriter, r *http.Request, msg string, err 
 	status := http.StatusInternalServerError
 
 	var ierr *internal.Error
-	if !errors.As(err, &ierr) {
-		resp.Error = "internal error"
-	} else {
+	if errors.As(err, &ierr) {
 		switch ierr.Code() {
 		case internal.ErrorCodeNotFound:
 			status = http.StatusNotFound
 		case internal.ErrorCodeInvalidArgument:
 			status = http.StatusBadRequest
+			var verrors validator.ValidationErrors
+			resp.Validations = make(map[string]any)
+			if errors.As(ierr, &verrors) {
+				for _, e := range verrors {
+					resp.Validations[e.Field()] = e.Error()
+				}
+			}
 		case internal.ErrorCodeDuplicate:
 			status = http.StatusConflict
-
-			// var verrors validation.Errors
-			// if errors.As(ierr, &verrors) {
-			// 	resp.Validations = verrors
-			// }
 		case internal.ErrorCodeUnknown:
 			fallthrough
 		default:
