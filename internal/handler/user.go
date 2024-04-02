@@ -46,9 +46,9 @@ func (h *UserHandler) RegisterRoutes(r *http.ServeMux) {
 	r.HandleFunc("GET /v1/users/{user_id}", h.handleGetUser)
 	r.HandleFunc("POST /v1/users/register", h.handleUserRegister)
 	r.HandleFunc("POST /v1/users/login", h.handleUserLogin)
-	// r.HandleFunc("DELETE /v1/users/{user_id}", h.handleUserDelete)
-	// r.HandleFunc("PUT /v1/users/{user_id}", h.handleUpdateUser)
-	// r.HandleFunc("PATCH /v1/users/{user_id}", h.handlePartialUpdateUser)
+	r.HandleFunc("DELETE /v1/users/{user_id}", h.handleUserDelete)
+	r.HandleFunc("PUT /v1/users/{user_id}", h.handleUpdateUser)
+	r.HandleFunc("PATCH /v1/users/{user_id}", h.handlePartialUpdateUser)
 }
 
 // RegisterUserRequest defines the request payload for registering a new user
@@ -67,7 +67,6 @@ func (h *UserHandler) handleUserRegister(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := validate.Struct(payload); err != nil {
-		h.log.Errorf("error validating payload: %v", err)
 		WriteErrorResponse(w, r, "invalid payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid payload"))
 		return
 	}
@@ -110,7 +109,6 @@ func (h *UserHandler) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := validate.Struct(payload); err != nil {
-		h.log.Errorf("error validating payload: %v", err)
 		WriteErrorResponse(w, r, "invalid payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid payload"))
 		return
 	}
@@ -166,6 +164,115 @@ func (h *UserHandler) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.log.Errorf("error getting user: %v", err)
 		WriteErrorResponse(w, r, "error getting user", err)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, user)
+}
+
+func (h *UserHandler) handleUserDelete(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.PathValue("user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		WriteErrorResponse(w, r, "invalid user id", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid user id"))
+		return
+	}
+
+	err = h.svc.Delete(userID)
+	if err != nil {
+		h.log.Errorf("error deleting user: %v", err)
+		WriteErrorResponse(w, r, "error deleting user", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *UserHandler) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.PathValue("user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		WriteErrorResponse(w, r, "invalid user id", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid user id"))
+		return
+	}
+
+	var userPayload RegisterUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&userPayload); err != nil {
+		WriteErrorResponse(w, r, "error decoding payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "error decoding payload"))
+		return
+	}
+
+	if err := validate.Struct(userPayload); err != nil {
+		WriteErrorResponse(w, r, "invalid payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid payload"))
+		return
+	}
+
+	user, err := h.svc.Update(userID, internal.User{
+		FirstName: userPayload.FirstName,
+		LastName:  userPayload.LastName,
+		Email:     userPayload.Email,
+		Password:  userPayload.Password,
+	})
+	if err != nil {
+		h.log.Errorf("error updating user: %v", err)
+		var ierr *internal.Error
+		// let user know if the email is already in use
+		if errors.As(err, &ierr) {
+			if ierr.Code() == internal.ErrorCodeDuplicate {
+				WriteErrorResponse(w, r, ierr.Message(), ierr)
+				return
+			}
+		}
+		WriteErrorResponse(w, r, "error updating user", err)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, user)
+}
+
+type PartialUpdateUserRequest struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+}
+
+func (h *UserHandler) handlePartialUpdateUser(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.PathValue("user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		WriteErrorResponse(w, r, "invalid user id", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid user id"))
+		return
+	}
+
+	var userPayload PartialUpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&userPayload); err != nil {
+		WriteErrorResponse(w, r, "error decoding payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "error decoding payload"))
+		return
+	}
+
+	if userPayload.Password != "" && (len(userPayload.Password) < 8 || len(userPayload.Password) > 64) {
+		WriteErrorResponse(w, r, "invalid password", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid password"))
+		return
+	}
+
+	user, err := h.svc.PartialUpdate(userID, internal.User{
+		FirstName: userPayload.FirstName,
+		LastName:  userPayload.LastName,
+		Email:     userPayload.Email,
+		Password:  userPayload.Password,
+	})
+	if err != nil {
+		h.log.Errorf("error updating user: %v", err)
+		var ierr *internal.Error
+		// let user know if the email is already in use
+		if errors.As(err, &ierr) {
+			if ierr.Code() == internal.ErrorCodeDuplicate {
+				WriteErrorResponse(w, r, ierr.Message(), ierr)
+				return
+			}
+		}
+		WriteErrorResponse(w, r, "error updating user", err)
 		return
 	}
 

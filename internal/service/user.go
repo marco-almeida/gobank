@@ -13,8 +13,8 @@ type UserRepository interface {
 	GetAll(limit, offset int64) ([]internal.User, error)
 	DeleteByID(int64) error
 	GetByEmail(string) (internal.User, error)
-	UpdateByID(int64, *internal.User) error
-	PartialUpdateByID(int64, *internal.User) error
+	UpdateByID(int64, *internal.User) (internal.User, error)
+	PartialUpdateByID(int64, *internal.User) (internal.User, error)
 	GetByID(int64) (internal.User, error)
 }
 
@@ -58,10 +58,10 @@ func (s *User) Update(id int64, u internal.User) (internal.User, error) {
 	// Hashing the password with the default cost of 10
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return u, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "failed to hash password")
+		return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "failed to hash password")
 	}
 	u.Password = string(hashedPassword)
-	return u, s.repo.UpdateByID(id, &u)
+	return s.repo.UpdateByID(id, &u)
 }
 
 func (s *User) PartialUpdate(id int64, u internal.User) (internal.User, error) {
@@ -73,7 +73,7 @@ func (s *User) PartialUpdate(id int64, u internal.User) (internal.User, error) {
 		}
 		u.Password = string(hashedPassword)
 	}
-	return u, s.repo.PartialUpdateByID(id, &u)
+	return s.repo.PartialUpdateByID(id, &u)
 }
 
 func (s *User) Login(email, payloadPassword string) (int64, string, error) {

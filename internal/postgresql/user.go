@@ -101,15 +101,28 @@ func (s *User) GetByEmail(email string) (internal.User, error) {
 	return u, nil
 }
 
-func (s *User) UpdateByID(id int64, u *internal.User) error {
+func (s *User) UpdateByID(id int64, u *internal.User) (internal.User, error) {
 	// password already hashed
-	_, err := s.db.Exec(`UPDATE users SET first_name = $1, last_name = $2, email = $3, password = $4 WHERE id = $5`, u.FirstName, u.LastName, u.Email, u.Password, id)
+	var updatedUser internal.User
+	err := s.db.QueryRow(`UPDATE users SET first_name = $1, last_name = $2, email = $3, password = $4 WHERE id = $5 RETURNING id, first_name, last_name, email, password`, u.FirstName, u.LastName, u.Email, u.Password, id).Scan(&updatedUser.ID, &updatedUser.FirstName, &updatedUser.LastName, &updatedUser.Email, &updatedUser.Password)
 	if err != nil {
-		return internal.WrapErrorf(err, internal.ErrorCodeUnknown, "update user")
+		// if err of type no rows, return 404
+		if errors.Is(err, sql.ErrNoRows) {
+			return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeNotFound, "user not found")
+		}
+		// check if error of type duplicate key
+		var pgErr *pq.Error
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeDuplicate, "email already in use")
+			}
+		}
+		return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "update user")
 	}
-	return nil
+
+	return updatedUser, nil
 }
-func (s *User) PartialUpdateByID(id int64, u *internal.User) error {
+func (s *User) PartialUpdateByID(id int64, u *internal.User) (internal.User, error) {
 	// if password exists, already hashed
 	var firstName *string
 	var lastName *string
@@ -129,11 +142,24 @@ func (s *User) PartialUpdateByID(id int64, u *internal.User) error {
 		password = &u.Password
 	}
 
-	_, err := s.db.Exec(`UPDATE users SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), password = COALESCE($4, password) WHERE id = $5`, firstName, lastName, email, password, id)
+	var updatedUser internal.User
+	err := s.db.QueryRow(`UPDATE users SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), password = COALESCE($4, password) WHERE id = $5 RETURNING id, first_name, last_name, email, password`, firstName, lastName, email, password, id).Scan(&updatedUser.ID, &updatedUser.FirstName, &updatedUser.LastName, &updatedUser.Email, &updatedUser.Password)
 	if err != nil {
-		return internal.WrapErrorf(err, internal.ErrorCodeUnknown, "partial update user")
+		// if err of type no rows, return 404
+		if errors.Is(err, sql.ErrNoRows) {
+			return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeNotFound, "user not found")
+		}
+		// check if error of type duplicate key
+		var pgErr *pq.Error
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeDuplicate, "email already in use")
+			}
+		}
+		return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "update user")
 	}
-	return nil
+
+	return updatedUser, nil
 }
 
 func (s *User) GetByID(id int64) (internal.User, error) {
