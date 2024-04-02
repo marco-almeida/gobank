@@ -56,21 +56,79 @@ func (s *User) Create(u *internal.User) error {
 }
 
 func (s *User) GetAll(limit, offset int64) ([]internal.User, error) {
-	return nil, nil
+	rows, err := s.db.Query(`SELECT id, first_name, last_name, email, password, created_at FROM users LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		return nil, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "get all users")
+	}
+
+	defer rows.Close()
+
+	var users []internal.User
+
+	for rows.Next() {
+		var u internal.User
+		err := rows.Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.Password, &u.CreatedAt)
+		if err != nil {
+			return nil, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "get all users")
+		}
+
+		users = append(users, u)
+	}
+
+	return users, nil
 }
 
-func (s *User) DeleteByID(int64) error {
+func (s *User) DeleteByID(id int64) error {
+	_, err := s.db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	if err != nil {
+		return internal.WrapErrorf(err, internal.ErrorCodeUnknown, "delete user")
+	}
+
 	return nil
 }
 
-func (s *User) GetByEmail(string) (internal.User, error) {
-	return internal.User{}, nil
+func (s *User) GetByEmail(email string) (internal.User, error) {
+	var u internal.User
+	err := s.db.QueryRow(`SELECT id, first_name, last_name, email, password, created_at FROM users WHERE email = $1`, email).Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.Password, &u.CreatedAt)
+	if err != nil {
+		return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "get user by email")
+	}
+
+	return u, nil
 }
 
-func (s *User) UpdateByID(int64, *internal.User) error {
+func (s *User) UpdateByID(id int64, u *internal.User) error {
+	// password already hashed
+	_, err := s.db.Exec(`UPDATE users SET first_name = $1, last_name = $2, email = $3, password = $4 WHERE id = $5`, u.FirstName, u.LastName, u.Email, u.Password, id)
+	if err != nil {
+		return internal.WrapErrorf(err, internal.ErrorCodeUnknown, "update user")
+	}
 	return nil
 }
-func (s *User) PartialUpdateByID(int64, *internal.User) error {
+func (s *User) PartialUpdateByID(id int64, u *internal.User) error {
+	// if password exists, already hashed
+	var firstName *string
+	var lastName *string
+	var email *string
+	var password *string
+
+	if u.FirstName != "" {
+		firstName = &u.FirstName
+	}
+	if u.LastName != "" {
+		lastName = &u.LastName
+	}
+	if u.Email != "" {
+		email = &u.Email
+	}
+	if u.Password != "" {
+		password = &u.Password
+	}
+
+	_, err := s.db.Exec(`UPDATE users SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), password = COALESCE($4, password) WHERE id = $5`, firstName, lastName, email, password, id)
+	if err != nil {
+		return internal.WrapErrorf(err, internal.ErrorCodeUnknown, "partial update user")
+	}
 	return nil
 }
 func (s *User) GetByID(int64) (internal.User, error) {

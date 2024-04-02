@@ -55,9 +55,39 @@ func (s *User) Delete(id int64) error {
 }
 
 func (s *User) Update(id int64, u internal.User) (internal.User, error) {
+	// Hashing the password with the default cost of 10
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return u, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "failed to hash password")
+	}
+	u.Password = string(hashedPassword)
 	return u, s.repo.UpdateByID(id, &u)
 }
 
 func (s *User) PartialUpdate(id int64, u internal.User) (internal.User, error) {
+	if u.Password != "" {
+		// Hashing the password with the default cost of 10
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return u, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "failed to hash password")
+		}
+		u.Password = string(hashedPassword)
+	}
 	return u, s.repo.PartialUpdateByID(id, &u)
+}
+
+func (s *User) Login(email, payloadPassword string) (int64, string, error) {
+	user, err := s.repo.GetByEmail(email)
+	if err != nil {
+		return 0, "", internal.WrapErrorf(err, internal.ErrorCodeUnauthorized, "failed to get user by email")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(payloadPassword))
+	if err != nil {
+		return 0, "", internal.WrapErrorf(err, internal.ErrorCodeUnauthorized, "invalid password")
+	}
+
+	token, err := CreateJWT(user.ID)
+
+	return user.ID, token, err
 }

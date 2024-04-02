@@ -40,6 +40,8 @@ func WriteErrorResponse(w http.ResponseWriter, r *http.Request, msg string, err 
 			}
 		case internal.ErrorCodeDuplicate:
 			status = http.StatusConflict
+		case internal.ErrorCodeUnauthorized:
+			status = http.StatusUnauthorized
 		case internal.ErrorCodeUnknown:
 			fallthrough
 		default:

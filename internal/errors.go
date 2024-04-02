@@ -21,6 +21,7 @@ const (
 	ErrorCodeNotFound
 	ErrorCodeInvalidArgument
 	ErrorCodeDuplicate
+	ErrorCodeUnauthorized
 )
 
 // WrapErrorf returns a wrapped error.
@@ -46,6 +47,7 @@ func (e *Error) Error() string {
 	return e.msg
 }
 
+// Message returns the custom message of the error.
 func (e *Error) Message() string {
 	return e.msg
 }

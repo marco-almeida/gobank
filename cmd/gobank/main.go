@@ -14,8 +14,8 @@ import (
 
 	"github.com/marco-almeida/gobank/cmd/internal"
 	"github.com/marco-almeida/gobank/internal/handler"
+	"github.com/marco-almeida/gobank/internal/middleware"
 	postgres "github.com/marco-almeida/gobank/internal/postgresql"
-	"github.com/marco-almeida/gobank/internal/rest"
 	"github.com/marco-almeida/gobank/internal/service"
 	"github.com/marco-almeida/gobank/pkg/logger"
 	"github.com/sirupsen/logrus"
@@ -54,6 +54,7 @@ func run(cfg *internal.Config) (<-chan error, error) {
 		Address: cfg.GobankAddress,
 		DB:      db,
 		Logger:  logger,
+		Envs:    cfg,
 	})
 
 	if err != nil {
@@ -107,6 +108,7 @@ type serverConfig struct {
 	Address string
 	DB      *sql.DB
 	Logger  *logrus.Logger
+	Envs    *internal.Config
 }
 
 func newServer(conf serverConfig) (*http.Server, error) {
@@ -131,8 +133,10 @@ func newServer(conf serverConfig) (*http.Server, error) {
 	userService := service.NewUser(userRepo, conf.Logger)
 	handler.NewUser(userService, conf.Logger).RegisterRoutes(srv.Handler.(*http.ServeMux))
 
-	loggingMiddleware := rest.LoggingMiddleware(conf.Logger)
-	srv.Handler = loggingMiddleware(rest.RateLimiterMiddleware(srv.Handler))
+	service.InitAuth(conf.Envs.JWTSecret)
+	// Middleware
+	loggingMiddleware := middleware.LoggingMiddleware(conf.Logger)
+	srv.Handler = loggingMiddleware(middleware.RateLimiterMiddleware(srv.Handler))
 
 	return srv, nil
 }

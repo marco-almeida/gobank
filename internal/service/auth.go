@@ -1,4 +1,4 @@
-package rest
+package service
 
 import (
 	"fmt"
@@ -7,15 +7,21 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/marco-almeida/gobank/internal/service"
 	"github.com/sirupsen/logrus"
 )
 
-func JWTMiddleware(log *logrus.Logger, userRepository service.UserRepository, JWTSecret string, handlerFunc http.HandlerFunc) http.HandlerFunc {
+var JWTSecret *string = new(string)
+
+func InitAuth(secret string) {
+	// nothing to do here
+	*JWTSecret = secret
+}
+
+func JWTMiddleware(log *logrus.Logger, userRepository UserRepository, handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenString := r.Header.Get("Authorization")
 
-		token, err := validateJWT(tokenString, JWTSecret)
+		token, err := validateJWT(tokenString)
 		if err != nil {
 			log.Infof("failed to validate token: %v", err)
 			w.WriteHeader(http.StatusUnauthorized)
@@ -55,7 +61,7 @@ func JWTMiddleware(log *logrus.Logger, userRepository service.UserRepository, JW
 		pathID := r.PathValue("user_id")
 		if pathID != "" {
 			if pathID != userIDString {
-				log.Info("user_id in token does not match path param")
+				log.Info("userID in token does not match path param")
 				w.WriteHeader(http.StatusForbidden)
 				return
 			}
@@ -73,13 +79,13 @@ func JWTMiddleware(log *logrus.Logger, userRepository service.UserRepository, JW
 	}
 }
 
-func CreateJWT(userID int64, JWTSecret string) (string, error) {
+func CreateJWT(userID int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"userID":    strconv.Itoa(int(userID)),
 		"expiresAt": time.Now().Add(3 * time.Hour).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(JWTSecret))
+	tokenString, err := token.SignedString([]byte(*JWTSecret))
 	if err != nil {
 		return "", err
 	}
@@ -87,14 +93,12 @@ func CreateJWT(userID int64, JWTSecret string) (string, error) {
 	return tokenString, err
 }
 
-func validateJWT(tokenString, JWTSecret string) (*jwt.Token, error) {
-	secret := JWTSecret
-
+func validateJWT(tokenString string) (*jwt.Token, error) {
 	return jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
-		return []byte(secret), nil
+		return []byte(*JWTSecret), nil
 	})
 }
