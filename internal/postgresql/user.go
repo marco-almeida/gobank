@@ -91,6 +91,10 @@ func (s *User) GetByEmail(email string) (internal.User, error) {
 	var u internal.User
 	err := s.db.QueryRow(`SELECT id, first_name, last_name, email, password, created_at FROM users WHERE email = $1`, email).Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.Password, &u.CreatedAt)
 	if err != nil {
+		// if err of type no rows, return 404
+		if errors.Is(err, sql.ErrNoRows) {
+			return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeNotFound, "user not found")
+		}
 		return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "get user by email")
 	}
 
@@ -131,6 +135,17 @@ func (s *User) PartialUpdateByID(id int64, u *internal.User) error {
 	}
 	return nil
 }
-func (s *User) GetByID(int64) (internal.User, error) {
-	return internal.User{}, nil
+
+func (s *User) GetByID(id int64) (internal.User, error) {
+	var u internal.User
+	err := s.db.QueryRow(`SELECT id, first_name, last_name, email, password, created_at FROM users WHERE id = $1`, id).Scan(&u.ID, &u.FirstName, &u.LastName, &u.Email, &u.Password, &u.CreatedAt)
+	if err != nil {
+		// if err of type no rows, return 404
+		if errors.Is(err, sql.ErrNoRows) {
+			return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeNotFound, "user not found")
+		}
+		return internal.User{}, internal.WrapErrorf(err, internal.ErrorCodeUnknown, "get user by id")
+	}
+
+	return u, nil
 }

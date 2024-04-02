@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/marco-almeida/gobank/internal"
@@ -41,8 +42,8 @@ func NewUser(svc UserService, logger *logrus.Logger) *UserHandler {
 
 // RegisterRoutes connects the handlers to the router
 func (h *UserHandler) RegisterRoutes(r *http.ServeMux) {
-	// r.HandleFunc("GET /v1/users", h.handleGetAllUsers)
-	// r.HandleFunc("GET /v1/users/{user_id}", h.handleGetUser)
+	r.HandleFunc("GET /v1/users", h.handleGetAllUsers)
+	r.HandleFunc("GET /v1/users/{user_id}", h.handleGetUser)
 	r.HandleFunc("POST /v1/users/register", h.handleUserRegister)
 	r.HandleFunc("POST /v1/users/login", h.handleUserLogin)
 	// r.HandleFunc("DELETE /v1/users/{user_id}", h.handleUserDelete)
@@ -131,4 +132,59 @@ func (h *UserHandler) handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	// return user id
 	WriteJSON(w, http.StatusOK, map[string]int64{"userID": userID})
+}
+
+type DataResponse struct {
+	Data *[]internal.User `json:"data,omitempty"`
+}
+
+func (h *UserHandler) handleGetAllUsers(w http.ResponseWriter, r *http.Request) {
+	limit, offset := getLimitAndOffset(r)
+	users, err := h.svc.GetAll(limit, offset)
+	if err != nil {
+		h.log.Errorf("error getting all users: %v", err)
+		WriteErrorResponse(w, r, "error getting all users", err)
+		return
+	}
+
+	if users == nil {
+		users = []internal.User{}
+	}
+
+	WriteJSON(w, http.StatusOK, users)
+}
+
+func (h *UserHandler) handleGetUser(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.PathValue("user_id")
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		WriteErrorResponse(w, r, "invalid user id", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid user id"))
+		return
+	}
+
+	user, err := h.svc.Get(userID)
+	if err != nil {
+		h.log.Errorf("error getting user: %v", err)
+		WriteErrorResponse(w, r, "error getting user", err)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, user)
+}
+
+// getLimitAndOffset returns the limit and offset from the request query parameters
+func getLimitAndOffset(r *http.Request) (int64, int64) {
+	limitStr := r.URL.Query().Get("limit")
+	limit, err := strconv.ParseInt(limitStr, 10, 64)
+	if err != nil {
+		limit = 10
+	}
+
+	offsetStr := r.URL.Query().Get("offset")
+	offset, err := strconv.ParseInt(offsetStr, 10, 64)
+	if err != nil {
+		offset = 0
+	}
+
+	return limit, offset
 }

@@ -12,7 +12,7 @@ type User struct {
 	LastName  string    `json:"lastName"`
 	Email     string    `json:"email"`
 	Password  string    `json:"-"`
-	CreatedAt time.Time `json:"omitempty"`
+	CreatedAt time.Time `json:"createdAt,omitempty"`
 }
 
 var ErrZeroBalance = errors.New("account balance is zero")

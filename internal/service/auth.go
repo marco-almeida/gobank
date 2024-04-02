@@ -7,17 +7,17 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/marco-almeida/gobank/internal/handler"
 	"github.com/sirupsen/logrus"
 )
 
 var JWTSecret *string = new(string)
 
 func InitAuth(secret string) {
-	// nothing to do here
 	*JWTSecret = secret
 }
 
-func JWTMiddleware(log *logrus.Logger, userRepository UserRepository, handlerFunc http.HandlerFunc) http.HandlerFunc {
+func JWTMiddleware(log *logrus.Logger, userService handler.UserService, handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenString := r.Header.Get("Authorization")
 
@@ -67,7 +67,7 @@ func JWTMiddleware(log *logrus.Logger, userRepository UserRepository, handlerFun
 			}
 		}
 
-		_, err = userRepository.GetByID(userID)
+		_, err = userService.Get(userID)
 		if err != nil {
 			log.Infof("failed to get user by id: %v", err)
 			w.WriteHeader(http.StatusUnauthorized)
