@@ -123,6 +123,7 @@ func newServer(conf serverConfig) (*http.Server, error) {
 
 	// add /api prefix to all routes
 	srv.Handler.(*http.ServeMux).Handle("/api/", http.StripPrefix("/api", srv.Handler))
+
 	// Users service
 	userRepo := postgres.NewUser(conf.DB)
 	err := userRepo.Init()
@@ -132,6 +133,16 @@ func newServer(conf serverConfig) (*http.Server, error) {
 
 	userService := service.NewUser(userRepo, conf.Logger)
 	handler.NewUser(userService, conf.Logger).RegisterRoutes(srv.Handler.(*http.ServeMux))
+
+	// Accounts service
+	accountRepo := postgres.NewAccount(conf.DB)
+	err = accountRepo.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	accountService := service.NewAccount(accountRepo, conf.Logger)
+	handler.NewAccount(accountService, conf.Logger).RegisterRoutes(srv.Handler.(*http.ServeMux))
 
 	service.InitAuth(conf.Envs.JWTSecret) // bruh
 	handler.InitAuth(conf.Envs.JWTSecret)

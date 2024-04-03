@@ -28,7 +28,7 @@ func NewBalanceUpdateRequest(amount USD) BalanceUpdateRequest {
 
 type Account struct {
 	ID        int64     `json:"id"`
-	UserID    int64     `json:"userID"`
+	UserID    int64     `json:"-"`
 	Balance   USD       `json:"balance"`
 	CreatedAt time.Time `json:"-"`
 }
