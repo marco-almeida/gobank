@@ -42,13 +42,13 @@ func NewUser(svc UserService, logger *logrus.Logger) *UserHandler {
 
 // RegisterRoutes connects the handlers to the router
 func (h *UserHandler) RegisterRoutes(r *http.ServeMux) {
-	r.HandleFunc("GET /v1/users", h.handleGetAllUsers)
-	r.HandleFunc("GET /v1/users/{user_id}", h.handleGetUser)
+	r.HandleFunc("GET /v1/users", JWTMiddleware(h.log, h.svc, h.handleGetAllUsers))
+	r.HandleFunc("GET /v1/users/{user_id}", JWTMiddleware(h.log, h.svc, h.handleGetUser))
 	r.HandleFunc("POST /v1/users/register", h.handleUserRegister)
 	r.HandleFunc("POST /v1/users/login", h.handleUserLogin)
-	r.HandleFunc("DELETE /v1/users/{user_id}", h.handleUserDelete)
-	r.HandleFunc("PUT /v1/users/{user_id}", h.handleUpdateUser)
-	r.HandleFunc("PATCH /v1/users/{user_id}", h.handlePartialUpdateUser)
+	r.HandleFunc("DELETE /v1/users/{user_id}", JWTMiddleware(h.log, h.svc, h.handleUserDelete))
+	r.HandleFunc("PUT /v1/users/{user_id}", JWTMiddleware(h.log, h.svc, h.handleUpdateUser))
+	r.HandleFunc("PATCH /v1/users/{user_id}", JWTMiddleware(h.log, h.svc, h.handlePartialUpdateUser))
 }
 
 // RegisterUserRequest defines the request payload for registering a new user

@@ -133,7 +133,8 @@ func newServer(conf serverConfig) (*http.Server, error) {
 	userService := service.NewUser(userRepo, conf.Logger)
 	handler.NewUser(userService, conf.Logger).RegisterRoutes(srv.Handler.(*http.ServeMux))
 
-	service.InitAuth(conf.Envs.JWTSecret)
+	service.InitAuth(conf.Envs.JWTSecret) // bruh
+	handler.InitAuth(conf.Envs.JWTSecret)
 	// Middleware
 	loggingMiddleware := middleware.LoggingMiddleware(conf.Logger)
 	srv.Handler = loggingMiddleware(middleware.RateLimiterMiddleware(srv.Handler))

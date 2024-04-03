@@ -76,6 +76,7 @@ func (s *User) PartialUpdate(id int64, u internal.User) (internal.User, error) {
 	return s.repo.PartialUpdateByID(id, &u)
 }
 
+// TODO: auth service should be injected
 func (s *User) Login(email, payloadPassword string) (int64, string, error) {
 	user, err := s.repo.GetByEmail(email)
 	if err != nil {
