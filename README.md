@@ -29,7 +29,7 @@ Technical features:
 - [x] Per-user rate limiting (via middleware)
 - [x] Dockerization (with multi-stage builds)
 - [x] Graceful shutdown
-- [ ] Database migrations
+- [x] Database migrations
 - [ ] Event streaming along with WebSockets or Server-Sent Events to notify clients of requested actions
 - [ ] Caching with Redis/Memcached
 - [ ] Testing (with coverage) triggered by CI/CD
@@ -38,19 +38,21 @@ Technical features:
 
 This is an opinionated folder structure for Go projects where scalability and maintainability are the main concerns.
 
-The [Standard Go Project Layout](https://github.com/golang-standards/project-layout/tree/master) was taken into account as well as opinions from the golang community such as [How To Structure Your Golang (API) Projects!?](https://www.youtube.com/watch?v=EqniGcAijDI).
+The [Standard Go Project Layout](https://github.com/golang-standards/project-layout/tree/master) was taken into account as well as opinions from the golang community such as [How To Structure Your Golang (API) Projects!?](https://www.youtube.com/watch?v=EqniGcAijDI) and [MICROSERVICES IN GO: DOMAIN DRIVEN DESIGN AND PROJECT LAYOUT](https://mariocarrion.com/2021/03/21/golang-microservices-domain-driven-design-project-layout.html).
 
 - `cmd`: Entrypoint for this project, where the whole application is configured and executed.
 - `build`: Packaging and Continuous Integration.
   - `ci` should contain configurations and scripts for CI.
   - `package` should contain cloud, container (Docker) and OS configurations as well as scripts for packaging.
-- `internal`: Private application and library code. This is the code you don't want others importing in their applications or libraries. Note that this layout pattern is enforced by the Go compiler itself. You can't import anything under `internal` from outside the repository.
-  - `rest`: API code containing the handlers, middlewares, and routes.
-  - `storage`: Database interface and interaction code.
-  - `types`: Custom types and related code.
+- `internal`: Domain specific errors and models. Private application and library code. This is the code you don't want others importing in their applications or libraries. Note that this layout pattern is enforced by the Go compiler itself. You can't import anything under `internal` from outside the repository.
+  - `handler`: API code containing the handlers.
+  - `middleware`: API code containing the middleware.
+  - `postgresql`: PostgreSQL interaction code.
+  - `service`: Business logic code called by the handlers.
 - `pkg`: Library code that's ok to use by external applications.
-- `configs`: Configuration file templates or default configs.
+- `db/migrations`: Database migrations.
 - `deploy`: IaaS, PaaS, system and container orchestration deployment configurations and templates.
+- `api`: OpenAPI/Swagger specs, JSON schema files, protocol definition files.
 
 ## Getting Started
 
