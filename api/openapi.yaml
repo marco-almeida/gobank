@@ -208,7 +208,7 @@ paths:
         schema:
           type: string
           example: '16'
-  /api/v1/users/register:
+  /api/v1/auth/register:
     post:
       tags:
         - Auth
@@ -241,7 +241,7 @@ paths:
       responses:
         '200':
           description: ''
-  /api/v1/users/login:
+  /api/v1/auth/login:
     post:
       tags:
         - Auth
