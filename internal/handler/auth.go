@@ -1,97 +1,117 @@
 package handler
 
 import (
-	"fmt"
+	"encoding/json"
+	"errors"
 	"net/http"
-	"strconv"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/marco-almeida/gobank/internal"
 	"github.com/sirupsen/logrus"
 )
 
-var JWTSecret *string = new(string)
-
-func InitAuth(secret string) {
-	*JWTSecret = secret
+type AuthService interface {
+	// returns user id and jwt token
+	Login(email, password string) (int64, string, error)
+	// hashes password and saves user
+	Register(u internal.User) error
+	WithJWTMiddleware(handlerFunc http.HandlerFunc) http.HandlerFunc
+	CreateJWT(userID int64) (string, error)
 }
 
-func JWTMiddleware(log *logrus.Logger, userService UserService, handlerFunc http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		tokenString := r.Header.Get("Authorization")
-		// check if type is Bearer
-		if len(tokenString) < 7 || tokenString[:7] != "Bearer " {
-			log.Info("invalid token format")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
+type AuthHandler struct {
+	svc AuthService
+	log *logrus.Logger
+}
 
-		tokenString = tokenString[7:]
-
-		token, err := validateJWT(tokenString)
-		if err != nil {
-			log.Infof("failed to validate token: %v", err)
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		if !token.Valid {
-			log.Info("invalid token")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		claims := token.Claims.(jwt.MapClaims)
-		tokenUserIDStr := claims["userID"].(string)
-		expiresAtFloat, ok := claims["expiresAt"].(float64)
-		if !ok {
-			log.Info("failed to get expiresAt from token")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		expiresAt := time.Unix(int64(expiresAtFloat), 0)
-		if time.Now().After(expiresAt) {
-			log.Info("token expired")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		userID, err := strconv.ParseInt(tokenUserIDStr, 10, 64)
-		if err != nil {
-			log.Infof("failed to parse userID: %v", err)
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		// if path contains user_id path param, compare it to the user_id in the token
-		pathIDStr := r.PathValue("user_id")
-		if pathIDStr != "" {
-			if pathIDStr != tokenUserIDStr {
-				log.Info("userID in token does not match path param")
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
-		}
-
-		_, err = userService.Get(userID)
-		if err != nil {
-			log.Infof("failed to get user by id: %v", err)
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		// Call the function if the token is valid
-		handlerFunc(w, r)
+func NewAuth(svc AuthService, logger *logrus.Logger) *AuthHandler {
+	return &AuthHandler{
+		svc: svc,
+		log: logger,
 	}
 }
 
-func validateJWT(tokenString string) (*jwt.Token, error) {
-	return jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
+func (h *AuthHandler) RegisterRoutes(r *http.ServeMux) {
+	r.HandleFunc("POST /v1/auth/register", h.handleRegister)
+	r.HandleFunc("POST /v1/auth/login", h.handleLogin)
+}
 
-		return []byte(*JWTSecret), nil
+// RegisterUserRequest defines the request payload for registering a new user
+type RegisterUserRequest struct {
+	FirstName string `json:"firstName" validate:"required"`
+	LastName  string `json:"lastName" validate:"required"`
+	Email     string `json:"email" validate:"required,email"`
+	Password  string `json:"password" validate:"required,min=8,max=64"`
+}
+
+func (h *AuthHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
+	var payload RegisterUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		WriteErrorResponse(w, r, "error decoding payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "error decoding payload"))
+		return
+	}
+
+	if err := validate.Struct(payload); err != nil {
+		WriteErrorResponse(w, r, "invalid payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid payload"))
+		return
+	}
+
+	err := h.svc.Register(internal.User{
+		FirstName: payload.FirstName,
+		LastName:  payload.LastName,
+		Email:     payload.Email,
+		Password:  payload.Password,
 	})
+
+	if err != nil {
+		h.log.Errorf("error creating user: %v", err)
+		var ierr *internal.Error
+		// let user know if the email is already in use
+		if errors.As(err, &ierr) {
+			if ierr.Code() == internal.ErrorCodeDuplicate {
+				WriteErrorResponse(w, r, ierr.Message(), ierr)
+				return
+			}
+		}
+		WriteErrorResponse(w, r, "error creating user", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+// LoginUserRequest defines the request payload for logging in a user
+type LoginUserRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+func (h *AuthHandler) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var payload LoginUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		WriteErrorResponse(w, r, "error decoding payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "error decoding payload"))
+		return
+	}
+
+	if err := validate.Struct(payload); err != nil {
+		WriteErrorResponse(w, r, "invalid payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid payload"))
+		return
+	}
+
+	userID, token, err := h.svc.Login(payload.Email, payload.Password)
+	if err != nil {
+		h.log.Errorf("error logging in user: %v", err)
+		WriteErrorResponse(w, r, "invalid credentials", err)
+		return
+	}
+
+	// set JWT in cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    token,
+		Secure:   true,
+		HttpOnly: true,
+	})
+
+	// return user id
+	WriteJSON(w, http.StatusOK, map[string]int64{"userID": userID})
 }

@@ -41,12 +41,6 @@ func (s *User) Get(id int64) (internal.User, error) {
 }
 
 func (s *User) Create(u internal.User) error {
-	// Hashing the password with the default cost of 10
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return internal.WrapErrorf(err, internal.ErrorCodeUnknown, "failed to hash password")
-	}
-	u.Password = string(hashedPassword)
 	return s.repo.Create(&u)
 }
 
@@ -76,19 +70,6 @@ func (s *User) PartialUpdate(id int64, u internal.User) (internal.User, error) {
 	return s.repo.PartialUpdateByID(id, &u)
 }
 
-// TODO: auth service should be injected
-func (s *User) Login(email, payloadPassword string) (int64, string, error) {
-	user, err := s.repo.GetByEmail(email)
-	if err != nil {
-		return 0, "", internal.WrapErrorf(err, internal.ErrorCodeUnauthorized, "failed to get user by email")
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(payloadPassword))
-	if err != nil {
-		return 0, "", internal.WrapErrorf(err, internal.ErrorCodeUnauthorized, "invalid password")
-	}
-
-	token, err := CreateJWT(user.ID)
-
-	return user.ID, token, err
+func (s *User) GetByEmail(email string) (internal.User, error) {
+	return s.repo.GetByEmail(email)
 }

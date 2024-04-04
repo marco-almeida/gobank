@@ -20,25 +20,27 @@ type AccountService interface {
 
 // AccountHandler is the handler for the account service
 type AccountHandler struct {
-	svc AccountService
-	log *logrus.Logger
+	svc     AccountService
+	log     *logrus.Logger
+	authSvc AuthService
 }
 
 // NewAccount creates a new account handler
-func NewAccount(svc AccountService, logger *logrus.Logger) *AccountHandler {
+func NewAccount(svc AccountService, logger *logrus.Logger, authSvc AuthService) *AccountHandler {
 	return &AccountHandler{
-		svc: svc,
-		log: logger,
+		svc:     svc,
+		log:     logger,
+		authSvc: authSvc,
 	}
 }
 
 // RegisterRoutes connects the handlers to the router
 func (h *AccountHandler) RegisterRoutes(r *http.ServeMux) {
-	r.HandleFunc("POST /v1/users/{user_id}/accounts", h.handleCreateAccount)
-	r.HandleFunc("GET /v1/users/{user_id}/accounts/{account_id}", h.handleGetAccountByID)
-	r.HandleFunc("GET /v1/users/{user_id}/accounts", h.handleGetAllAccountsByID)
-	r.HandleFunc("POST /v1/users/{user_id}/accounts/{account_id}/updateBalance", h.handleUpdateBalance)
-	r.HandleFunc("DELETE /v1/users/{user_id}/accounts/{account_id}", h.handleDeleteAccount)
+	r.HandleFunc("POST /v1/users/{user_id}/accounts", h.authSvc.WithJWTMiddleware(h.handleCreateAccount))
+	r.HandleFunc("GET /v1/users/{user_id}/accounts/{account_id}", h.authSvc.WithJWTMiddleware(h.handleGetAccountByID))
+	r.HandleFunc("GET /v1/users/{user_id}/accounts", h.authSvc.WithJWTMiddleware(h.handleGetAllAccountsByID))
+	r.HandleFunc("POST /v1/users/{user_id}/accounts/{account_id}/updateBalance", h.authSvc.WithJWTMiddleware(h.handleUpdateBalance))
+	r.HandleFunc("DELETE /v1/users/{user_id}/accounts/{account_id}", h.authSvc.WithJWTMiddleware(h.handleDeleteAccount))
 }
 
 func (h *AccountHandler) handleCreateAccount(w http.ResponseWriter, r *http.Request) {

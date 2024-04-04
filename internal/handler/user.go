@@ -15,12 +15,11 @@ import (
 type UserService interface {
 	GetAll(limit, offset int64) ([]internal.User, error)
 	Get(id int64) (internal.User, error)
+	GetByEmail(email string) (internal.User, error)
 	Create(user internal.User) error
 	Delete(id int64) error
 	Update(id int64, user internal.User) (internal.User, error)
 	PartialUpdate(id int64, user internal.User) (internal.User, error)
-	// returns user id and jwt token
-	Login(email, password string) (int64, string, error)
 }
 
 // use a single instance of Validate, it caches struct info
@@ -28,108 +27,27 @@ var validate *validator.Validate = validator.New(validator.WithRequiredStructEna
 
 // UserHandler is the handler for the user service
 type UserHandler struct {
-	svc UserService
-	log *logrus.Logger
+	svc     UserService
+	log     *logrus.Logger
+	authSvc AuthService
 }
 
 // NewUser creates a new user handler
-func NewUser(svc UserService, logger *logrus.Logger) *UserHandler {
+func NewUser(svc UserService, logger *logrus.Logger, authSvc AuthService) *UserHandler {
 	return &UserHandler{
-		svc: svc,
-		log: logger,
+		svc:     svc,
+		log:     logger,
+		authSvc: authSvc,
 	}
 }
 
 // RegisterRoutes connects the handlers to the router
 func (h *UserHandler) RegisterRoutes(r *http.ServeMux) {
-	r.HandleFunc("GET /v1/users", JWTMiddleware(h.log, h.svc, h.handleGetAllUsers))
-	r.HandleFunc("GET /v1/users/{user_id}", JWTMiddleware(h.log, h.svc, h.handleGetUser))
-	r.HandleFunc("POST /v1/users/register", h.handleUserRegister)
-	r.HandleFunc("POST /v1/users/login", h.handleUserLogin)
-	r.HandleFunc("DELETE /v1/users/{user_id}", JWTMiddleware(h.log, h.svc, h.handleUserDelete))
-	r.HandleFunc("PUT /v1/users/{user_id}", JWTMiddleware(h.log, h.svc, h.handleUpdateUser))
-	r.HandleFunc("PATCH /v1/users/{user_id}", JWTMiddleware(h.log, h.svc, h.handlePartialUpdateUser))
-}
-
-// RegisterUserRequest defines the request payload for registering a new user
-type RegisterUserRequest struct {
-	FirstName string `json:"firstName" validate:"required"`
-	LastName  string `json:"lastName" validate:"required"`
-	Email     string `json:"email" validate:"required,email"`
-	Password  string `json:"password" validate:"required,min=8,max=64"`
-}
-
-func (h *UserHandler) handleUserRegister(w http.ResponseWriter, r *http.Request) {
-	var payload RegisterUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		WriteErrorResponse(w, r, "error decoding payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "error decoding payload"))
-		return
-	}
-
-	if err := validate.Struct(payload); err != nil {
-		WriteErrorResponse(w, r, "invalid payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid payload"))
-		return
-	}
-
-	err := h.svc.Create(internal.User{
-		FirstName: payload.FirstName,
-		LastName:  payload.LastName,
-		Email:     payload.Email,
-		Password:  payload.Password,
-	})
-
-	if err != nil {
-		h.log.Errorf("error creating user: %v", err)
-		var ierr *internal.Error
-		// let user know if the email is already in use
-		if errors.As(err, &ierr) {
-			if ierr.Code() == internal.ErrorCodeDuplicate {
-				WriteErrorResponse(w, r, ierr.Message(), ierr)
-				return
-			}
-		}
-		WriteErrorResponse(w, r, "error creating user", err)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-}
-
-// LoginUserRequest defines the request payload for logging in a user
-type LoginUserRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
-}
-
-func (h *UserHandler) handleUserLogin(w http.ResponseWriter, r *http.Request) {
-	var payload LoginUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		WriteErrorResponse(w, r, "error decoding payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "error decoding payload"))
-		return
-	}
-
-	if err := validate.Struct(payload); err != nil {
-		WriteErrorResponse(w, r, "invalid payload", internal.WrapErrorf(err, internal.ErrorCodeInvalidArgument, "invalid payload"))
-		return
-	}
-
-	userID, token, err := h.svc.Login(payload.Email, payload.Password)
-	if err != nil {
-		h.log.Errorf("error logging in user: %v", err)
-		WriteErrorResponse(w, r, "invalid credentials", err)
-		return
-	}
-
-	// set JWT in cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     "access_token",
-		Value:    token,
-		Secure:   true,
-		HttpOnly: true,
-	})
-
-	// return user id
-	WriteJSON(w, http.StatusOK, map[string]int64{"userID": userID})
+	r.HandleFunc("GET /v1/users", h.authSvc.WithJWTMiddleware(h.handleGetAllUsers))
+	r.HandleFunc("GET /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleGetUser))
+	r.HandleFunc("DELETE /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleUserDelete))
+	r.HandleFunc("PUT /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleUpdateUser))
+	r.HandleFunc("PATCH /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handlePartialUpdateUser))
 }
 
 type DataResponse struct {

@@ -124,7 +124,7 @@ func newServer(conf serverConfig) (*http.Server, error) {
 	// add /api prefix to all routes
 	srv.Handler.(*http.ServeMux).Handle("/api/", http.StripPrefix("/api", srv.Handler))
 
-	// Users service
+	//////////////////// Users service ////////////////////
 	userRepo := postgres.NewUser(conf.DB)
 	err := userRepo.Init()
 	if err != nil {
@@ -132,8 +132,12 @@ func newServer(conf serverConfig) (*http.Server, error) {
 	}
 
 	userService := service.NewUser(userRepo, conf.Logger)
-	handler.NewUser(userService, conf.Logger).RegisterRoutes(srv.Handler.(*http.ServeMux))
 
+	authService := service.NewAuth(conf.Logger, userService, conf.Envs.JWTSecret)
+	handler.NewUser(userService, conf.Logger, authService).RegisterRoutes(srv.Handler.(*http.ServeMux))
+
+	handler.NewAuth(authService, conf.Logger).RegisterRoutes(srv.Handler.(*http.ServeMux))
+	
 	// Accounts service
 	accountRepo := postgres.NewAccount(conf.DB)
 	err = accountRepo.Init()
@@ -142,10 +146,8 @@ func newServer(conf serverConfig) (*http.Server, error) {
 	}
 
 	accountService := service.NewAccount(accountRepo, conf.Logger)
-	handler.NewAccount(accountService, conf.Logger).RegisterRoutes(srv.Handler.(*http.ServeMux))
+	handler.NewAccount(accountService, conf.Logger, authService).RegisterRoutes(srv.Handler.(*http.ServeMux))
 
-	service.InitAuth(conf.Envs.JWTSecret) // bruh
-	handler.InitAuth(conf.Envs.JWTSecret)
 	// Middleware
 	loggingMiddleware := middleware.LoggingMiddleware(conf.Logger)
 	srv.Handler = loggingMiddleware(middleware.RateLimiterMiddleware(srv.Handler))
