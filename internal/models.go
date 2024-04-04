@@ -1,12 +1,22 @@
-package types
+package internal
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
 
-var ErrZeroBalance = fmt.Errorf("account balance is zero")
-var ErrAccountNotFound = fmt.Errorf("account not found")
+type User struct {
+	ID        int64     `json:"id"`
+	FirstName string    `json:"firstName"`
+	LastName  string    `json:"lastName"`
+	Email     string    `json:"email"`
+	Password  string    `json:"-"`
+	CreatedAt time.Time `json:"createdAt,omitempty"`
+}
+
+var ErrZeroBalance = errors.New("account balance is zero")
+var ErrAccountNotFound = errors.New("account not found")
 
 type BalanceUpdateRequest struct {
 	Amount USD `json:"amount"`
@@ -18,7 +28,7 @@ func NewBalanceUpdateRequest(amount USD) BalanceUpdateRequest {
 
 type Account struct {
 	ID        int64     `json:"id"`
-	UserID    int64     `json:"userID"`
+	UserID    int64     `json:"-"`
 	Balance   USD       `json:"balance"`
 	CreatedAt time.Time `json:"-"`
 }

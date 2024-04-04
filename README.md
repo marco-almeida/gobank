@@ -74,12 +74,12 @@ If you want to run the API locally, you will need the following:
 git clone https://github.com/marco-almeida/gobank.git
 ```
 
-2. Set the environment variables in the `configs/.env` file according to the template in `configs/example.env`.
+2. Set the environment variables in the `.env` file according to the template in `example.env`.
 
 3. Run the containers.
 
 ```sh
-docker compose -f ./deploy/docker-compose.yml --env-file ./configs/.env up # --build if needed for a new image, -d for detached mode
+docker compose -f ./deploy/docker-compose.yml --env-file ./.env up # --build if needed for a new image, -d for detached mode
 ```
 
 If running the API locally, execute the following command:
