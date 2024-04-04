@@ -10,9 +10,9 @@ import (
 )
 
 type AuthService interface {
-	// returns user id and jwt token
+	// Login returns user id and jwt token
 	Login(email, password string) (int64, string, error)
-	// hashes password and saves user
+	// Register hashes password and saves user
 	Register(u internal.User) error
 	WithJWTMiddleware(handlerFunc http.HandlerFunc) http.HandlerFunc
 	CreateJWT(userID int64) (string, error)

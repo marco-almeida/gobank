@@ -16,7 +16,6 @@ type User struct {
 }
 
 var ErrZeroBalance = errors.New("account balance is zero")
-var ErrAccountNotFound = errors.New("account not found")
 
 type BalanceUpdateRequest struct {
 	Amount USD `json:"amount"`

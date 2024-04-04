@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 
 	"github.com/marco-almeida/gobank/internal"
 )
@@ -63,7 +64,7 @@ func (s *Account) GetByID(userID int64, accountID int64) (internal.Account, erro
 	var a internal.Account
 	err := s.db.QueryRow(`SELECT id, user_id, balance, created_at FROM accounts WHERE user_id = $1 AND id = $2`, userID, accountID).Scan(&a.ID, &a.UserID, &a.Balance, &a.CreatedAt)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return internal.Account{}, internal.WrapErrorf(err, internal.ErrorCodeNotFound, "account not found")
 		}
 		return internal.Account{}, err
@@ -90,7 +91,7 @@ func (s *Account) UpdateBalanceByID(userID int64, accountID int64, balance inter
 	var updatedAccount internal.Account
 	err := s.db.QueryRow(`UPDATE accounts SET balance = balance + $1 WHERE user_id = $2 AND id = $3 RETURNING id, balance`, balance, userID, accountID).Scan(&updatedAccount.ID, &updatedAccount.Balance)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return updatedAccount, internal.WrapErrorf(err, internal.ErrorCodeNotFound, "account not found")
 		}
 		return updatedAccount, err

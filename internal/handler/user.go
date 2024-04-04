@@ -23,7 +23,7 @@ type UserService interface {
 }
 
 // use a single instance of Validate, it caches struct info
-var validate *validator.Validate = validator.New(validator.WithRequiredStructEnabled())
+var validate = validator.New(validator.WithRequiredStructEnabled())
 
 // UserHandler is the handler for the user service
 type UserHandler struct {

@@ -24,7 +24,7 @@ type User struct {
 	log  *logrus.Logger
 }
 
-// NewUsers creates a new User service.
+// NewUser NewUsers creates a new User service.
 func NewUser(repo UserRepository, log *logrus.Logger) *User {
 	return &User{
 		repo: repo,
