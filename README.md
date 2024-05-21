@@ -1,4 +1,4 @@
-# gobank
+# mybank
 
 Bank API implemented with Go's http std lib and PostgreSQL.
 
@@ -50,7 +50,6 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
   - `postgresql`: PostgreSQL interaction code.
   - `service`: Business logic code called by the handlers.
 - `pkg`: Library code that's ok to use by external applications.
-- `db/migrations`: Database migrations.
 - `deploy`: IaaS, PaaS, system and container orchestration deployment configurations and templates.
 - `api`: OpenAPI/Swagger specs, JSON schema files, protocol definition files.
 
@@ -73,15 +72,17 @@ If you want to run the API locally, you will need the following:
 1. Clone the repository.
 
 ```sh
-git clone https://github.com/marco-almeida/gobank.git
+git clone https://github.com/marco-almeida/mybank.git
 ```
 
-2. Set the environment variables in the `.env` file according to the template in `example.env`.
+2. Create a `development.env` file in the project's root directory according to the template in `example.env`.
+
+*If the environment value MYBANK_ENV is set, the file with name ${MYBANK_ENV}.env will be used instead of `development.env`.*
 
 3. Run the containers.
 
 ```sh
-docker compose -f ./deploy/docker-compose.yml --env-file ./.env up # --build if needed for a new image, -d for detached mode
+docker compose -f ./deploy/docker-compose.yml --env-file ./development.env up # --build if needed for a new image, -d for detached mode
 ```
 
 If running the API locally, execute the following command:
@@ -94,4 +95,4 @@ Access the API at <http://localhost:3000>.
 
 ## Documentation
 
-OpenAPI 3 documentation is available at <https://github.com/marco-almeida/gobank/blob/main/api/openapi.yaml>.
+OpenAPI 3 documentation is available at <https://github.com/marco-almeida/mybank/blob/main/api/openapi.yaml>.

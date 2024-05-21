@@ -12,12 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/marco-almeida/gobank/cmd/internal"
-	"github.com/marco-almeida/gobank/internal/handler"
-	"github.com/marco-almeida/gobank/internal/middleware"
-	postgres "github.com/marco-almeida/gobank/internal/postgresql"
-	"github.com/marco-almeida/gobank/internal/service"
-	"github.com/marco-almeida/gobank/pkg/logger"
+	"github.com/marco-almeida/mybank/cmd/internal"
+	"github.com/marco-almeida/mybank/internal/handler"
+	"github.com/marco-almeida/mybank/internal/middleware"
+	postgres "github.com/marco-almeida/mybank/internal/postgresql"
+	"github.com/marco-almeida/mybank/internal/service"
+	"github.com/marco-almeida/mybank/pkg/logger"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,7 +34,7 @@ func main() {
 
 func run(cfg *internal.Config) (<-chan error, error) {
 	// set up logging
-	logFolder := filepath.Join("logs", "gobank")
+	logFolder := filepath.Join("logs", "mybank")
 	err := os.MkdirAll(logFolder, os.ModePerm)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func run(cfg *internal.Config) (<-chan error, error) {
 	}
 
 	srv, err := newServer(serverConfig{
-		Address: cfg.GobankAddress,
+		Address: cfg.mybankAddress,
 		DB:      db,
 		Logger:  logger,
 		Envs:    cfg,
@@ -92,7 +92,7 @@ func run(cfg *internal.Config) (<-chan error, error) {
 	}()
 
 	go func() {
-		logger.Infof("Listening and serving %s", cfg.GobankAddress)
+		logger.Infof("Listening and serving %s", cfg.mybankAddress)
 
 		// "ListenAndServe always returns a non-nil error. After Shutdown or Close, the returned error is
 		// ErrServerClosed."
@@ -137,7 +137,7 @@ func newServer(conf serverConfig) (*http.Server, error) {
 	handler.NewUser(userService, conf.Logger, authService).RegisterRoutes(srv.Handler.(*http.ServeMux))
 
 	handler.NewAuth(authService, conf.Logger).RegisterRoutes(srv.Handler.(*http.ServeMux))
-	
+
 	// Accounts service
 	accountRepo := postgres.NewAccount(conf.DB)
 	err = accountRepo.Init()

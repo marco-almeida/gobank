@@ -1,17 +1,17 @@
 version: '3.8'
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16.3-alpine3.19
+    ports:
+      - ${POSTGRES_PORT}:5432
     restart: always
     env_file:
       # in order to use the env vars in this file, since its not in the same directory
-      - ../.env
-    ports:
-      - ${POSTGRES_PORT}:5432
+      - ../development.env
     networks:
-      - gobank
+      - mybank
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - mybank-postgres:/var/lib/postgresql/data
     healthcheck:
       test:
         [
@@ -26,25 +26,27 @@ services:
       interval: 5s # check every 5 seconds
       timeout: 5s # wait 5 seconds for the check to complete
       retries: 10 # allow 10 retries before considering the container as unhealthy
-
-  gobank:
-    container_name: gobank
-    image: gobank:latest
-    ports:
-      - "3000:3000"
-    networks:
-      - gobank
-    build:
-      context: ../
-      dockerfile: ./build/package/gobank/alpine.Dockerfile
-    volumes:
-      - ../.env:/app/.env
-      - ../logs:/app/logs
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: on-failure
+  # mybank:
+  #   container_name: mybank
+  #   image: mybank:latest
+  #   ports:
+  #     - "3000:3000"
+  #   networks:
+  #     - mybank
+  #   build:
+  #     context: ../
+  #     dockerfile: ./build/package/mybank/alpine.Dockerfile
+  #   volumes:
+  #     - ../.env:/app/.env
+  #     - ../logs:/app/logs
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   restart: on-failure
 
 networks:
-  gobank:
+  mybank:
     driver: bridge
+
+volumes:
+  mybank-postgres:

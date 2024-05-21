@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: gobank
+  title: mybank
   version: 1.0.0
   contact: {}
 servers:
