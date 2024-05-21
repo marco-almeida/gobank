@@ -34,9 +34,9 @@ type Config struct {
 func LoadConfig(path string) (Config, error) {
 	config := Config{}
 	viper.AddConfigPath(path)
-	
+
 	configName := "development"
-	// if MYBANK_ENVIRONMENT is set, use that
+	// if MYBANK_ENV is set, use that
 	if env, ok := os.LookupEnv("MYBANK_ENV"); ok {
 		configName = env
 	}
