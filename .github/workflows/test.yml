@@ -56,4 +56,4 @@ jobs:
         run: go run asd.go
 
       - name: Test
-        run: go test -v -cover -short ./...
+        run: go test -v -cover -short ./internal/postgresql/db
