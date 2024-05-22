@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -51,6 +50,5 @@ func LoadConfig(path string) (Config, error) {
 	}
 
 	err = viper.Unmarshal(&config)
-	fmt.Println("config", config)
 	return config, err
 }
