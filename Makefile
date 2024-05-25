@@ -1,11 +1,11 @@
-run: builda
-	@bin/mybank/main.exe
+run: build
+	bin/mybank/main.exe
 
-builda:
-	@go build -o bin/mybank/main.exe ./cmd/mybank/main.go
+build:
+	go build -o bin/mybank/main.exe ./cmd/mybank/main.go
 
 test:
-	@go test -v ./...
+	go test -v -cover -short ./...
 
 sqlc:
 	sqlc generate -f ./internal/postgresql/sqlc.yaml
@@ -16,4 +16,4 @@ new_migration:
 migrateup:
 	migrate -path db/migrations -database "$(DB_URL)" -verbose up
 
-.PHONY: run builda test sqlc new_migration
+.PHONY: run build test sqlc new_migration migrateup

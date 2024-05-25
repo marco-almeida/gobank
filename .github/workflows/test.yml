@@ -64,4 +64,4 @@ jobs:
           echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> testing.env
 
       - name: Test
-        run: go test -v -cover -short ./internal/postgresql/db # TODO: use go test ./... when possible
+        run: go test -v -cover -short ./...

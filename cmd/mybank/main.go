@@ -1,171 +1,17 @@
-// package main
-
-// import (
-// 	"context"
-// 	"database/sql"
-// 	"errors"
-// 	"log"
-// 	"net/http"
-// 	"os"
-// 	"os/signal"
-// 	"path/filepath"
-// 	"syscall"
-// 	"time"
-
-// 	"github.com/marco-almeida/mybank/cmd/internal"
-// 	"github.com/marco-almeida/mybank/internal/handler"
-// 	"github.com/marco-almeida/mybank/internal/middleware"
-// 	postgres "github.com/marco-almeida/mybank/internal/postgresql"
-// 	"github.com/marco-almeida/mybank/internal/service"
-// 	"github.com/marco-almeida/mybank/pkg/logger"
-// 	"github.com/sirupsen/logrus"
-// )
-
-// func main() {
-// 	errC, err := run(&internal.Envs)
-// 	if err != nil {
-// 		log.Fatalf("Couldn't run: %s", err)
-// 	}
-
-// 	if err := <-errC; err != nil {
-// 		log.Fatalf("Error while running: %s", err)
-// 	}
-// }
-
-// func run(cfg *internal.Config) (<-chan error, error) {
-// 	// set up logging
-// 	logFolder := filepath.Join("logs", "mybank")
-// 	err := os.MkdirAll(logFolder, os.ModePerm)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	logFile := filepath.Join(logFolder, "main.log")
-// 	logger := logger.New(logFile, true)
-
-// 	//
-
-// 	db, err := internal.NewPostgreSQL(cfg)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	srv, err := newServer(serverConfig{
-// 		Address: cfg.mybankAddress,
-// 		DB:      db,
-// 		Logger:  logger,
-// 		Envs:    cfg,
-// 	})
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	errC := make(chan error, 1)
-
-// 	ctx, stop := signal.NotifyContext(context.Background(),
-// 		os.Interrupt,
-// 		syscall.SIGTERM,
-// 		syscall.SIGQUIT)
-
-// 	go func() {
-// 		<-ctx.Done()
-
-// 		logger.Info("Shutdown signal received")
-
-// 		ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-
-// 		defer func() {
-// 			db.Close()
-// 			stop()
-// 			cancel()
-// 			close(errC)
-// 		}()
-
-// 		srv.SetKeepAlivesEnabled(false)
-
-// 		if err := srv.Shutdown(ctxTimeout); err != nil { //nolint: contextcheck
-// 			errC <- err
-// 		}
-
-// 		logger.Info("Shutdown completed")
-// 	}()
-
-// 	go func() {
-// 		logger.Infof("Listening and serving %s", cfg.mybankAddress)
-
-// 		// "ListenAndServe always returns a non-nil error. After Shutdown or Close, the returned error is
-// 		// ErrServerClosed."
-// 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-// 			errC <- err
-// 		}
-// 	}()
-
-// 	return errC, nil
-// }
-
-// type serverConfig struct {
-// 	Address string
-// 	DB      *sql.DB
-// 	Logger  *logrus.Logger
-// 	Envs    *internal.Config
-// }
-
-// func newServer(conf serverConfig) (*http.Server, error) {
-// 	srv := &http.Server{
-// 		Addr:              conf.Address,
-// 		Handler:           http.NewServeMux(),
-// 		ReadTimeout:       time.Hour,
-// 		WriteTimeout:      time.Hour,
-// 		ReadHeaderTimeout: 10 * time.Second,
-// 		IdleTimeout:       time.Hour,
-// 	}
-
-// 	// add /api prefix to all routes
-// 	srv.Handler.(*http.ServeMux).Handle("/api/", http.StripPrefix("/api", srv.Handler))
-
-// 	//////////////////// Users service ////////////////////
-// 	userRepo := postgres.NewUser(conf.DB)
-// 	err := userRepo.Init()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	userService := service.NewUser(userRepo, conf.Logger)
-
-// 	authService := service.NewAuth(conf.Logger, userService, conf.Envs.JWTSecret)
-// 	handler.NewUser(userService, conf.Logger, authService).RegisterRoutes(srv.Handler.(*http.ServeMux))
-
-// 	handler.NewAuth(authService, conf.Logger).RegisterRoutes(srv.Handler.(*http.ServeMux))
-
-// 	// Accounts service
-// 	accountRepo := postgres.NewAccount(conf.DB)
-// 	err = accountRepo.Init()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	accountService := service.NewAccount(accountRepo, conf.Logger)
-// 	handler.NewAccount(accountService, conf.Logger, authService).RegisterRoutes(srv.Handler.(*http.ServeMux))
-
-// 	// Middleware
-// 	loggingMiddleware := middleware.LoggingMiddleware(conf.Logger)
-// 	srv.Handler = loggingMiddleware(middleware.RateLimiterMiddleware(srv.Handler))
-
-// 	return srv, nil
-// }
-
 package main
 
 import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -209,7 +55,7 @@ func main() {
 
 	// log to file and terminal
 	// set up human readable logging
-	if config.Environment == "development" || config.Environment == "testing" {
+	if config.Environment == "development" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: io.MultiWriter(os.Stdout, f)})
 	} else {
 		// set up json logging
@@ -236,11 +82,13 @@ func main() {
 
 	log.Info().Msg("db migrated successfully")
 
+	// init server dependencies
 	store := db.NewStore(connPool)
 
 	waitGroup, ctx := errgroup.WithContext(ctx)
 
-	runHTPPServer(ctx, waitGroup, config)
+	// running in waitgroup coroutine in order to wait for graceful shutdown
+	runHTPPServer(ctx, waitGroup, config, store)
 
 	err = waitGroup.Wait()
 	if err != nil {
@@ -248,16 +96,32 @@ func main() {
 	}
 }
 
-func runHTPPServer(ctx context.Context, waitGroup *errgroup.Group, config config.Config) {
+func runHTPPServer(ctx context.Context, waitGroup *errgroup.Group, config config.Config, store db.Store) {
 	server, err := newServer(config, store)
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot create server")
 	}
 
-	err = server.Start(config.HTTPServerAddress)
-	if err != nil {
-		log.Fatal().Err(err).Msg("cannot start server")
-	}
+	waitGroup.Go(func() error {
+		log.Info().Msg(fmt.Sprintf("start HTTP server on %s", server.Addr))
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("cannot start server: %w", err)
+		}
+		return nil
+	})
+
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		log.Info().Msg("shutting down gracefully, press Ctrl+C again to force")
+
+		if err := server.Shutdown(ctx); err != nil {
+			return fmt.Errorf("server forced to shutdown: %w", err)
+		}
+
+		log.Info().Msg("HTTP server stopped")
+
+		return nil
+	})
 }
 
 func runDBMigration(migrationURL string, dbSource string) error {
@@ -271,4 +135,31 @@ func runDBMigration(migrationURL string, dbSource string) error {
 	}
 
 	return nil
+}
+
+func newServer(config config.Config, store db.Store) (*http.Server, error) {
+	router := gin.Default()
+
+	if config.Environment != "development" && config.Environment != "testing" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	srv := &http.Server{
+		Addr:              config.HTTPServerAddress,
+		Handler:           router,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       10 * time.Second,
+	}
+
+	// TODO: add api prefix to all routes
+
+	// init user repo
+
+	// init user service
+
+	// init user handler and register routes
+
+	return srv, nil
 }

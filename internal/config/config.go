@@ -16,7 +16,7 @@ type Config struct {
 	PostgresDatabase  string `mapstructure:"POSTGRES_DB"`
 	Environment       string `mapstructure:"MYBANK_ENV"`
 	RedisAddress      string `mapstructure:"REDIS_ADDRESS"`
-	HTTPServerAddress string `mapstructure:"HTTP_SERVER_ADDRESS"`
+	HTTPServerAddress string `mapstructure:"MYBANK_HTTP_SERVER_ADDRESS"`
 	// GRPCServerAddress    string        `mapstructure:"GRPC_SERVER_ADDRESS"`
 	MigrationURL string `mapstructure:"MIGRATION_URL"`
 	// TokenSymmetricKey    string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
