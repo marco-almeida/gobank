@@ -6,8 +6,8 @@ services:
       - ${POSTGRES_PORT}:5432
     restart: always
     env_file:
-      # in order to use the env vars in this file, since its not in the same directory
-      - ../development.env
+      # in order to use the env vars in this file
+      - development.env
     networks:
       - mybank
     volumes:
@@ -37,7 +37,7 @@ services:
   #     context: ../
   #     dockerfile: ./build/package/mybank/alpine.Dockerfile
   #   volumes:
-  #     - ../.env:/app/.env
+  #     - ../*.env:/app/*.env
   #     - ../logs:/app/logs
   #   depends_on:
   #     postgres:
