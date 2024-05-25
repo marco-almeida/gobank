@@ -157,6 +157,118 @@
 
 package main
 
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/errgroup"
+
+	"github.com/marco-almeida/mybank/internal/config"
+	"github.com/marco-almeida/mybank/internal/postgresql"
+	"github.com/marco-almeida/mybank/internal/postgresql/db"
+)
+
+var interruptSignals = []os.Signal{
+	os.Interrupt,
+	syscall.SIGTERM,
+	syscall.SIGINT,
+}
+
 func main() {
-	
+	// get env vars
+	config, err := config.LoadConfig(".")
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot load config")
+	}
+
+	fmt.Printf("%+v\n", config)
+
+	// config logging
+	logFolder := filepath.Join("logs", "mybank")
+	err = os.MkdirAll(logFolder, os.ModePerm)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot create log folder")
+	}
+
+	logFile := filepath.Join(logFolder, "main.log")
+
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot open log file")
+	}
+
+	// log to file and terminal
+	// set up human readable logging
+	if config.Environment == "development" || config.Environment == "testing" {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: io.MultiWriter(os.Stdout, f)})
+	} else {
+		// set up json logging
+		log.Logger = log.Output(io.MultiWriter(os.Stdout, f))
+	}
+
+	// init graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), interruptSignals...)
+	defer stop()
+
+	// init db
+	connPool, err := postgresql.NewPostgreSQL(ctx, &config)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot connect to db")
+	}
+
+	// run migrations
+	dbSource := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=disable", config.PostgresUser, config.PostgresPassword, config.PostgresHost, config.PostgresPort, config.PostgresDatabase)
+
+	err = runDBMigration(config.MigrationURL, dbSource)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot run db migration")
+	}
+
+	log.Info().Msg("db migrated successfully")
+
+	store := db.NewStore(connPool)
+
+	waitGroup, ctx := errgroup.WithContext(ctx)
+
+	runHTPPServer(ctx, waitGroup, config)
+
+	err = waitGroup.Wait()
+	if err != nil {
+		log.Fatal().Err(err).Msg("error from wait group")
+	}
+}
+
+func runHTPPServer(ctx context.Context, waitGroup *errgroup.Group, config config.Config) {
+	server, err := newServer(config, store)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot create server")
+	}
+
+	err = server.Start(config.HTTPServerAddress)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot start server")
+	}
+}
+
+func runDBMigration(migrationURL string, dbSource string) error {
+	migration, err := migrate.New(migrationURL, dbSource)
+	if err != nil {
+		return fmt.Errorf("cannot create new migrate instance: %w", err)
+	}
+
+	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to run migrate up: %w", err)
+	}
+
+	return nil
 }

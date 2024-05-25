@@ -3,13 +3,12 @@ package db
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"os"
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/marco-almeida/mybank/internal/config"
+	"github.com/marco-almeida/mybank/internal/postgresql"
 )
 
 var testStore Store
@@ -21,14 +20,7 @@ func TestMain(m *testing.M) {
 		log.Fatal("cannot load config:", err)
 	}
 
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-		config.PostgresUser,
-		config.PostgresPassword,
-		config.PostgresHost,
-		config.PostgresPort,
-		config.PostgresDatabase)
-		
-	connPool, err := pgxpool.New(context.Background(), connStr)
+	connPool, err := postgresql.NewPostgreSQL(context.Background(), &config)
 	if err != nil {
 		log.Fatal("cannot connect to db:", err)
 	}
