@@ -1,13 +1,14 @@
-package internal
+package postgresql
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/marco-almeida/mybank/internal/config"
 )
 
-func NewPostgreSQL(cfg *config.Config) (*sql.DB, error) {
+func NewPostgreSQL(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		cfg.PostgresUser,
 		cfg.PostgresPassword,
@@ -15,9 +16,5 @@ func NewPostgreSQL(cfg *config.Config) (*sql.DB, error) {
 		cfg.PostgresPort,
 		cfg.PostgresDatabase)
 
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, err
-	}
-	return db, db.Ping()
+	return pgxpool.New(ctx, connStr)
 }
