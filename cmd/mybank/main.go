@@ -15,13 +15,15 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/marco-almeida/mybank/internal/config"
+	"github.com/marco-almeida/mybank/internal/handler"
 	"github.com/marco-almeida/mybank/internal/postgresql"
-	"github.com/marco-almeida/mybank/internal/postgresql/db"
+	"github.com/marco-almeida/mybank/internal/service"
 )
 
 var interruptSignals = []os.Signal{
@@ -39,30 +41,9 @@ func main() {
 
 	fmt.Printf("%+v\n", config)
 
-	// config logging
-	logFolder := filepath.Join("logs", "mybank")
-	err = os.MkdirAll(logFolder, os.ModePerm)
-	if err != nil {
-		log.Fatal().Err(err).Msg("cannot create log folder")
-	}
+	setupLogging(config)
 
-	logFile := filepath.Join(logFolder, "main.log")
-
-	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal().Err(err).Msg("cannot open log file")
-	}
-
-	// log to file and terminal
-	// set up human readable logging
-	if config.Environment == "development" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: io.MultiWriter(os.Stdout, f)})
-	} else {
-		// set up json logging
-		log.Logger = log.Output(io.MultiWriter(os.Stdout, f))
-	}
-
-	// init graceful shutdown
+	// setup graceful shutdown signals
 	ctx, stop := signal.NotifyContext(context.Background(), interruptSignals...)
 	defer stop()
 
@@ -82,13 +63,9 @@ func main() {
 
 	log.Info().Msg("db migrated successfully")
 
-	// init server dependencies
-	store := db.NewStore(connPool)
-
-	waitGroup, ctx := errgroup.WithContext(ctx)
-
 	// running in waitgroup coroutine in order to wait for graceful shutdown
-	runHTPPServer(ctx, waitGroup, config, store)
+	waitGroup, ctx := errgroup.WithContext(ctx)
+	runHTPPServer(ctx, waitGroup, config, connPool)
 
 	err = waitGroup.Wait()
 	if err != nil {
@@ -96,8 +73,72 @@ func main() {
 	}
 }
 
-func runHTPPServer(ctx context.Context, waitGroup *errgroup.Group, config config.Config, store db.Store) {
-	server, err := newServer(config, store)
+func setupLogging(config config.Config) {
+	// log to file ./logs/mybank/main.log and terminal
+	logFolder := filepath.Join("logs", "mybank")
+	err := os.MkdirAll(logFolder, os.ModePerm)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot create log folder")
+	}
+
+	logFile := filepath.Join(logFolder, "main.log")
+
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot open log file")
+	}
+
+	// set up json or human readable logging
+	if config.Environment == "development" {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: io.MultiWriter(os.Stdout, f)})
+	} else {
+		log.Logger = log.Output(io.MultiWriter(os.Stdout, f))
+	}
+}
+
+func runDBMigration(migrationURL string, dbSource string) error {
+	migration, err := migrate.New(migrationURL, dbSource)
+	if err != nil {
+		return fmt.Errorf("cannot create new migrate instance: %w", err)
+	}
+
+	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to run migrate up: %w", err)
+	}
+
+	return nil
+}
+
+func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, error) {
+	router := gin.Default()
+
+	if config.Environment != "development" && config.Environment != "testing" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	srv := &http.Server{
+		Addr:              config.HTTPServerAddress,
+		Handler:           router,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       10 * time.Second,
+	}
+
+	// init user repo
+	userRepo := postgresql.NewUserRepository(connPool)
+
+	// init user service
+	userService := service.NewUserService(userRepo)
+
+	// init user handler and register routes
+	handler.NewUserHandler(userService).RegisterRoutes(router)
+
+	return srv, nil
+}
+
+func runHTPPServer(ctx context.Context, waitGroup *errgroup.Group, config config.Config, connPool *pgxpool.Pool) {
+	server, err := newServer(config, connPool)
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot create server")
 	}
@@ -122,44 +163,4 @@ func runHTPPServer(ctx context.Context, waitGroup *errgroup.Group, config config
 
 		return nil
 	})
-}
-
-func runDBMigration(migrationURL string, dbSource string) error {
-	migration, err := migrate.New(migrationURL, dbSource)
-	if err != nil {
-		return fmt.Errorf("cannot create new migrate instance: %w", err)
-	}
-
-	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("failed to run migrate up: %w", err)
-	}
-
-	return nil
-}
-
-func newServer(config config.Config, store db.Store) (*http.Server, error) {
-	router := gin.Default()
-
-	if config.Environment != "development" && config.Environment != "testing" {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	srv := &http.Server{
-		Addr:              config.HTTPServerAddress,
-		Handler:           router,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:       10 * time.Second,
-	}
-
-	// TODO: add api prefix to all routes
-
-	// init user repo
-
-	// init user service
-
-	// init user handler and register routes
-
-	return srv, nil
 }
