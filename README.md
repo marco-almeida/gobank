@@ -1,10 +1,11 @@
 # mybank
 
-Bank API implemented with Go's http std lib and PostgreSQL.
+Bank API implemented with Golang's Gin, PostgreSQL, and Redis.
 
-It is a REST API that allows the creation of users, accounts related to users, deposits, withdrawals, and transfers.
+It is a REST API that allows for the creation of users, accounts related to users, deposits, withdrawals, and transfers.
 
-The project is a work in progress and is being developed as a learning experience and to serve as a reference for future projects.
+This project can be considered as a refactor and extension of techschool's course [Backend Master Class [Golang, Postgres, Redis, Gin, gRPC, Docker, Kubernetes, AWS, CI/CD]
+](https://www.udemy.com/course/backend-master-class-golang-postgresql-kubernetes/).
 
 ## Features
 
@@ -42,15 +43,20 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
 
 - `cmd`: Entrypoint for this project, where the whole application is configured and executed.
 - `build`: Packaging and Continuous Integration.
-  - `ci` should contain configurations and scripts for CI.
+  - `ci` should contain configurations and scripts for CI. In this case, github actions is used for continuous integration, so this folder is not used.
   - `package` should contain cloud, container (Docker) and OS configurations as well as scripts for packaging.
-- `internal`: Domain specific errors and models. Private application and library code. This is the code you don't want others importing in their applications or libraries. Note that this layout pattern is enforced by the Go compiler itself. You can't import anything under `internal` from outside the repository.
+- `internal`: Domain specific errors and models. Private application and library code. This is the code you don't want others importing in their applications or libraries. Note that this layout pattern is enforced by the Go compiler itself.
   - `handler`: API code containing the handlers.
-  - `middleware`: API code containing the middleware.
+  - `config`: Configuration code.
+  - `pkg`: Code shared by the internal packages.
+  - `middleware`: API code containing middlewares.
   - `postgresql`: PostgreSQL interaction code.
   - `service`: Business logic code called by the handlers.
-- `deploy`: IaaS, PaaS, system and container orchestration deployment configurations and templates.
 - `api`: OpenAPI/Swagger specs, JSON schema files, protocol definition files.
+
+## Architecture
+
+Layered/Onion Architecture. Before server creation, the layers are instantiated and configured using dependency injection.
 
 ## Getting Started
 
@@ -81,7 +87,7 @@ git clone https://github.com/marco-almeida/mybank.git
 3. Run the containers.
 
 ```sh
-docker compose -f ./deploy/docker-compose.yml --env-file ./development.env up # --build if needed for a new image, -d for detached mode
+docker compose --env-file ./development.env up # --build if needed for a new image, -d for detached mode
 ```
 
 If running the API locally, execute the following command:
