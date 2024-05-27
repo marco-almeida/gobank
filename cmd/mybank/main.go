@@ -154,7 +154,7 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 	accountService := service.NewAccountService(accountRepo)
 
 	// init account handler and register routes
-	handler.NewAccountHandler(accountService).RegisterRoutes(router)
+	handler.NewAccountHandler(accountService).RegisterRoutes(router, tokenMaker)
 
 	return srv, nil
 }
