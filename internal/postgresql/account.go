@@ -22,3 +22,11 @@ func NewAccountRepository(connPool *pgxpool.Pool) *AccountRepository {
 func (accountRepo *AccountRepository) Create(ctx context.Context, arg db.CreateAccountParams) (db.Account, error) {
 	return accountRepo.q.CreateAccount(ctx, arg)
 }
+
+func (accountRepo *AccountRepository) Get(ctx context.Context, id int64) (db.Account, error) {
+	return accountRepo.q.GetAccount(ctx, id)
+}
+
+func (accountRepo *AccountRepository) List(ctx context.Context, arg db.ListAccountsParams) ([]db.Account, error) {
+	return accountRepo.q.ListAccounts(ctx, arg)
+}
