@@ -155,5 +155,62 @@ func (s *AuthService) Login(ctx context.Context, req LoginUserParams) (LoginUser
 			CreatedAt:         user.CreatedAt,
 		},
 	}, nil
+}
 
+type RenewAccessTokenRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
+type RenewAccessTokenResponse struct {
+	AccessToken          string    `json:"access_token"`
+	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
+}
+
+func (s *AuthService) RenewAccessToken(ctx context.Context, req RenewAccessTokenRequest) (RenewAccessTokenResponse, error) {
+	refreshPayload, err := s.tokenMaker.VerifyToken(req.RefreshToken)
+	if err != nil {
+		return RenewAccessTokenResponse{}, fmt.Errorf("invalid refresh token: %w", err)
+	}
+
+	session, err := s.sessionRepo.Get(ctx, refreshPayload.ID)
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			return RenewAccessTokenResponse{}, fmt.Errorf("session not found: %w", err)
+		}
+		return RenewAccessTokenResponse{}, fmt.Errorf("internal server error: %w", err)
+	}
+
+	if session.IsBlocked {
+		err := fmt.Errorf("blocked session")
+		return RenewAccessTokenResponse{}, fmt.Errorf("session is blocked: %w", err)
+	}
+
+	if session.Username != refreshPayload.Username {
+		err := fmt.Errorf("incorrect session user")
+		return RenewAccessTokenResponse{}, fmt.Errorf("session user mismatch: %w", err)
+	}
+
+	if session.RefreshToken != req.RefreshToken {
+		err := fmt.Errorf("mismatched session token")
+		return RenewAccessTokenResponse{}, fmt.Errorf("session token mismatch: %w", err)
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		err := fmt.Errorf("expired session")
+		return RenewAccessTokenResponse{}, fmt.Errorf("session expired: %w", err)
+	}
+
+	accessToken, accessPayload, err := s.tokenMaker.CreateToken(
+		refreshPayload.Username,
+		refreshPayload.Role,
+		s.accessTokenDuration,
+	)
+	if err != nil {
+		return RenewAccessTokenResponse{}, fmt.Errorf("cannot create access token: %w", err)
+	}
+
+	return RenewAccessTokenResponse{
+		AccessToken:          accessToken,
+		AccessTokenExpiresAt: accessPayload.ExpiredAt,
+	}, nil
 }

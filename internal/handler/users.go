@@ -40,7 +40,7 @@ func NewUserHandler(userSvc UserService, authSvc AuthService) *UserHandler {
 func (h *UserHandler) RegisterRoutes(r *gin.Engine) {
 	r.POST("/api/v1/users", h.handleCreateUser)
 	r.POST("/api/v1/users/login", h.handleLoginUser)
-	// r.POST("/users/renew_token", h.handleCreateUser)
+	r.POST("/api/v1/users/renew_access", h.handleRenewAccessToken)
 	// r.HandleFunc("GET /v1/users", h.authSvc.WithJWTMiddleware(h.handleGetAllUsers))
 	// r.HandleFunc("GET /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleGetUser))
 	// r.HandleFunc("DELETE /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleUserDelete))
@@ -118,6 +118,34 @@ func (server *UserHandler) handleLoginUser(ctx *gin.Context) {
 		Password:  req.Password,
 		UserAgent: ctx.Request.UserAgent(),
 		ClientIP:  ctx.ClientIP(),
+	})
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, rsp)
+}
+
+type renewAccessTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type renewAccessTokenResponse struct {
+	AccessToken          string    `json:"access_token"`
+	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
+}
+
+func (server *UserHandler) handleRenewAccessToken(ctx *gin.Context) {
+	var req renewAccessTokenRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	rsp, err := server.authSvc.RenewAccessToken(ctx, service.RenewAccessTokenRequest{
+		RefreshToken: req.RefreshToken,
 	})
 
 	if err != nil {
