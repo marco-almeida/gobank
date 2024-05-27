@@ -9,9 +9,10 @@ import (
 // UserRepository defines the methods that any User repository should implement.
 type UserRepository interface {
 	Create(ctx context.Context, arg db.CreateUserParams) (db.User, error)
+	Get(ctx context.Context, username string) (db.User, error)
 }
 
-// User defines the application service in charge of interacting with Users.
+// UserService defines the application service in charge of interacting with Users.
 type UserService struct {
 	repo UserRepository
 }
@@ -25,4 +26,8 @@ func NewUserService(repo UserRepository) *UserService {
 
 func (s *UserService) Create(ctx context.Context, user db.CreateUserParams) (db.User, error) {
 	return s.repo.Create(ctx, user)
+}
+
+func (s *UserService) Get(ctx context.Context, username string) (db.User, error) {
+	return s.repo.Get(ctx, username)
 }

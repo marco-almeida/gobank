@@ -22,3 +22,7 @@ func NewUserRepository(connPool *pgxpool.Pool) *UserRepository {
 func (userRepo *UserRepository) Create(ctx context.Context, arg db.CreateUserParams) (db.User, error) {
 	return userRepo.q.CreateUser(ctx, arg)
 }
+
+func (userRepo *UserRepository) Get(ctx context.Context, username string) (db.User, error) {
+	return userRepo.q.GetUser(ctx, username)
+}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -9,19 +10,20 @@ import (
 // Config stores all configuration of the application.
 // The values are read by viper from a config file or environment variables.
 type Config struct {
-	PostgresUser      string `mapstructure:"POSTGRES_USER"`
-	PostgresHost      string `mapstructure:"POSTGRES_HOST"`
-	PostgresPort      int    `mapstructure:"POSTGRES_PORT"`
-	PostgresPassword  string `mapstructure:"POSTGRES_PASSWORD"`
-	PostgresDatabase  string `mapstructure:"POSTGRES_DB"`
-	Environment       string `mapstructure:"MYBANK_ENV"`
-	RedisAddress      string `mapstructure:"REDIS_ADDRESS"`
+	PostgresUser     string `mapstructure:"POSTGRES_USER"`
+	PostgresHost     string `mapstructure:"POSTGRES_HOST"`
+	PostgresPort     int    `mapstructure:"POSTGRES_PORT"`
+	PostgresPassword string `mapstructure:"POSTGRES_PASSWORD"`
+	PostgresDatabase string `mapstructure:"POSTGRES_DB"`
+	JWTSecret        string `mapstructure:"JWT_SECRET"`
+	Environment      string `mapstructure:"MYBANK_ENV"`
+	// RedisAddress      string `mapstructure:"REDIS_ADDRESS"`
 	HTTPServerAddress string `mapstructure:"MYBANK_HTTP_SERVER_ADDRESS"`
 	// GRPCServerAddress    string        `mapstructure:"GRPC_SERVER_ADDRESS"`
 	MigrationURL string `mapstructure:"MIGRATION_URL"`
-	// TokenSymmetricKey    string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
-	// AccessTokenDuration  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
-	// RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
+	// TokenSymmetricKey    string        `mapstructure:"TOKEN_SYMMETRIC_KEY"` // if using paseto
+	AccessTokenDuration  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
+	RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
 	// EmailSenderName      string        `mapstructure:"EMAIL_SENDER_NAME"`
 	// EmailSenderAddress   string        `mapstructure:"EMAIL_SENDER_ADDRESS"`
 	// EmailSenderPassword  string        `mapstructure:"EMAIL_SENDER_PASSWORD"`
