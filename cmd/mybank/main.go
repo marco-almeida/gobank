@@ -147,6 +147,15 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 	// init user handler and register routes
 	handler.NewUserHandler(userService, authService).RegisterRoutes(router)
 
+	// init account repo
+	accountRepo := postgresql.NewAccountRepository(connPool)
+
+	// init account service
+	accountService := service.NewAccountService(accountRepo)
+
+	// init account handler and register routes
+	handler.NewAccountHandler(accountService).RegisterRoutes(router)
+
 	return srv, nil
 }
 

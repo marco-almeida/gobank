@@ -73,7 +73,7 @@ func newUserResponse(user db.User) userResponse {
 	}
 }
 
-func (server *UserHandler) handleCreateUser(ctx *gin.Context) {
+func (h *UserHandler) handleCreateUser(ctx *gin.Context) {
 	var req createUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -87,7 +87,7 @@ func (server *UserHandler) handleCreateUser(ctx *gin.Context) {
 		Email:             req.Email,
 	}
 
-	user, err := server.authSvc.Create(ctx, arg)
+	user, err := h.authSvc.Create(ctx, arg)
 	if err != nil {
 		if db.ErrorCode(err) == db.UniqueViolation {
 			ctx.JSON(http.StatusForbidden, errorResponse(err))
@@ -106,14 +106,14 @@ type loginUserRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-func (server *UserHandler) handleLoginUser(ctx *gin.Context) {
+func (h *UserHandler) handleLoginUser(ctx *gin.Context) {
 	var req loginUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	rsp, err := server.authSvc.Login(ctx, service.LoginUserParams{
+	rsp, err := h.authSvc.Login(ctx, service.LoginUserParams{
 		Username:  req.Username,
 		Password:  req.Password,
 		UserAgent: ctx.Request.UserAgent(),
@@ -137,14 +137,14 @@ type renewAccessTokenResponse struct {
 	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
 }
 
-func (server *UserHandler) handleRenewAccessToken(ctx *gin.Context) {
+func (h *UserHandler) handleRenewAccessToken(ctx *gin.Context) {
 	var req renewAccessTokenRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	rsp, err := server.authSvc.RenewAccessToken(ctx, service.RenewAccessTokenRequest{
+	rsp, err := h.authSvc.RenewAccessToken(ctx, service.RenewAccessTokenRequest{
 		RefreshToken: req.RefreshToken,
 	})
 
