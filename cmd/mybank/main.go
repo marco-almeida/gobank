@@ -24,6 +24,7 @@ import (
 	"github.com/marco-almeida/mybank/internal/handler"
 	"github.com/marco-almeida/mybank/internal/postgresql"
 	"github.com/marco-almeida/mybank/internal/service"
+	"github.com/marco-almeida/mybank/internal/token"
 )
 
 var interruptSignals = []os.Signal{
@@ -110,11 +111,11 @@ func runDBMigration(migrationURL string, dbSource string) error {
 }
 
 func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, error) {
-	router := gin.Default()
-
 	if config.Environment != "development" && config.Environment != "testing" {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	router := gin.Default()
 
 	srv := &http.Server{
 		Addr:              config.HTTPServerAddress,
@@ -128,11 +129,23 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 	// init user repo
 	userRepo := postgresql.NewUserRepository(connPool)
 
+	// init session repo
+	sessionRepo := postgresql.NewSessionRepository(connPool)
+
 	// init user service
 	userService := service.NewUserService(userRepo)
 
+	// init token maker
+	tokenMaker, err := token.NewJWTMaker(config.JWTSecret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create token maker: %w", err)
+	}
+
+	// init auth service
+	authService := service.NewAuthService(*userService, sessionRepo, tokenMaker, config.AccessTokenDuration, config.RefreshTokenDuration)
+
 	// init user handler and register routes
-	handler.NewUserHandler(userService).RegisterRoutes(router)
+	handler.NewUserHandler(userService, authService).RegisterRoutes(router)
 
 	return srv, nil
 }
