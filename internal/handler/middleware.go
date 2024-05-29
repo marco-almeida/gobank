@@ -18,7 +18,7 @@ const (
 )
 
 // authMiddleware creates a gin middleware for authorization
-func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
+func authMiddleware(tokenMaker token.Maker, rolesWithPermission []string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authorizationHeader := ctx.GetHeader(authorizationHeaderKey)
 
@@ -51,9 +51,22 @@ func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 
 		if payload.Role == pkg.AdminRole {
 			ctx.Set("override_permission", true)
+		} else if !HasPermission(payload.Role, rolesWithPermission) {
+			err := errors.New("forbidden")
+			ctx.AbortWithStatusJSON(http.StatusForbidden, errorResponse(err))
+			return
 		}
 
 		ctx.Set(authorizationPayloadKey, payload)
 		ctx.Next()
 	}
+}
+
+func HasPermission(userRole string, rolesWithPermission []string) bool {
+	for _, role := range rolesWithPermission {
+		if role == userRole {
+			return true
+		}
+	}
+	return false
 }

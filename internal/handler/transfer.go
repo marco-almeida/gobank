@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/marco-almeida/mybank/internal/pkg"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 	"github.com/marco-almeida/mybank/internal/token"
 )
@@ -32,7 +33,7 @@ func NewTransferHandler(transferSvc TransferService, accountSvc AccountService) 
 
 // RegisterRoutes connects the handlers to the router
 func (h *TransferHandler) RegisterRoutes(r *gin.Engine, tokenMaker token.Maker) {
-	authRoutes := r.Group("/").Use(authMiddleware(tokenMaker))
+	authRoutes := r.Group("/").Use(authMiddleware(tokenMaker, []string{pkg.DepositorRole}))
 	authRoutes.POST("/api/v1/transfers", h.handleCreateTransfer)
 }
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/marco-almeida/mybank/internal/pkg"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 	"github.com/marco-almeida/mybank/internal/token"
 )
@@ -33,10 +34,13 @@ func NewAccountHandler(accountSvc AccountService) *AccountHandler {
 
 // RegisterRoutes connects the handlers to the router
 func (h *AccountHandler) RegisterRoutes(r *gin.Engine, tokenMaker token.Maker) {
-	authRoutes := r.Group("/").Use(authMiddleware(tokenMaker))
-	authRoutes.POST("/api/v1/accounts", h.handleCreateAccount)
-	authRoutes.GET("/api/v1/accounts/:id", h.handleGetAccount)
-	authRoutes.GET("/api/v1/accounts", h.handleListAccounts)
+	authRoutes := r.Group("/api").Use(authMiddleware(tokenMaker, []string{pkg.DepositorRole}))
+	authRoutes.POST("/v1/accounts", h.handleCreateAccount)
+	authRoutes.GET("/v1/accounts/:id", h.handleGetAccount)
+	authRoutes.GET("/v1/accounts", h.handleListAccounts)
+
+	adminRoutes := r.Group("/api").Use(authMiddleware(tokenMaker, []string{pkg.BankerRole}))
+	adminRoutes.DELETE("/v1/accounts/:id", nil) // only accessible by bank workers (or admins)
 }
 
 type createAccountRequest struct {
