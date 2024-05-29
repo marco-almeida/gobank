@@ -3,9 +3,11 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 	"github.com/marco-almeida/mybank/internal/token"
 )
@@ -44,8 +46,18 @@ type createAccountRequest struct {
 func (h *AccountHandler) handleCreateAccount(ctx *gin.Context) {
 	var req createAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		var errorMessage string
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			validationError := validationErrors[0]
+			if validationError.Tag() == "required" {
+				errorMessage = fmt.Sprintf("%s not provided", validationError.Field())
+			}
+		}
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": errorMessage})
 		return
+		// ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		// return
 	}
 
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
@@ -91,10 +103,14 @@ func (h *AccountHandler) handleGetAccount(ctx *gin.Context) {
 	}
 
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	if account.Owner != authPayload.Username {
-		err := errors.New("account doesn't belong to the authenticated user")
-		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
-		return
+	overridePermission := ctx.MustGet("override_permission").(bool)
+	// needs refactoring
+	if !overridePermission {
+		if account.Owner != authPayload.Username {
+			err := errors.New("account doesn't belong to the authenticated user")
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
 	}
 
 	ctx.JSON(http.StatusOK, account)

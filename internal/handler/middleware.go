@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/marco-almeida/mybank/internal/pkg"
 	"github.com/marco-almeida/mybank/internal/token"
 )
 
@@ -46,6 +47,10 @@ func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 		if err != nil {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
 			return
+		}
+
+		if payload.Role == pkg.AdminRole {
+			ctx.Set("override_permission", true)
 		}
 
 		ctx.Set(authorizationPayloadKey, payload)
