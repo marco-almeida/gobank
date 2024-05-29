@@ -3,9 +3,12 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"github.com/marco-almeida/mybank/internal/pkg"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 	"github.com/marco-almeida/mybank/internal/token"
 )
@@ -31,10 +34,13 @@ func NewAccountHandler(accountSvc AccountService) *AccountHandler {
 
 // RegisterRoutes connects the handlers to the router
 func (h *AccountHandler) RegisterRoutes(r *gin.Engine, tokenMaker token.Maker) {
-	authRoutes := r.Group("/").Use(authMiddleware(tokenMaker))
-	authRoutes.POST("/api/v1/accounts", h.handleCreateAccount)
-	authRoutes.GET("/api/v1/accounts/:id", h.handleGetAccount)
-	authRoutes.GET("/api/v1/accounts", h.handleListAccounts)
+	authRoutes := r.Group("/api").Use(authMiddleware(tokenMaker, []string{pkg.DepositorRole}))
+	authRoutes.POST("/v1/accounts", h.handleCreateAccount)
+	authRoutes.GET("/v1/accounts/:id", h.handleGetAccount)
+	authRoutes.GET("/v1/accounts", h.handleListAccounts)
+
+	adminRoutes := r.Group("/api").Use(authMiddleware(tokenMaker, []string{pkg.BankerRole}))
+	adminRoutes.DELETE("/v1/accounts/:id", nil) // only accessible by bank workers (or admins)
 }
 
 type createAccountRequest struct {
@@ -44,8 +50,18 @@ type createAccountRequest struct {
 func (h *AccountHandler) handleCreateAccount(ctx *gin.Context) {
 	var req createAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		var errorMessage string
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			validationError := validationErrors[0]
+			if validationError.Tag() == "required" {
+				errorMessage = fmt.Sprintf("%s not provided", validationError.Field())
+			}
+		}
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": errorMessage})
 		return
+		// ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		// return
 	}
 
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
@@ -91,10 +107,14 @@ func (h *AccountHandler) handleGetAccount(ctx *gin.Context) {
 	}
 
 	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	if account.Owner != authPayload.Username {
-		err := errors.New("account doesn't belong to the authenticated user")
-		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
-		return
+	overridePermission := ctx.MustGet("override_permission").(bool)
+	// needs refactoring
+	if !overridePermission {
+		if account.Owner != authPayload.Username {
+			err := errors.New("account doesn't belong to the authenticated user")
+			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			return
+		}
 	}
 
 	ctx.JSON(http.StatusOK, account)
