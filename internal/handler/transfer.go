@@ -47,7 +47,7 @@ type transferRequest struct {
 func (h *TransferHandler) handleCreateTransfer(ctx *gin.Context) {
 	var req transferRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -64,7 +64,7 @@ func (h *TransferHandler) handleCreateTransfer(ctx *gin.Context) {
 
 	if fromAccount.Currency != req.Currency {
 		err := fmt.Errorf("account [%d] currency mismatch: %s vs %s", fromAccount.ID, fromAccount.Currency, req.Currency)
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *TransferHandler) handleCreateTransfer(ctx *gin.Context) {
 
 	if toAccount.Currency != req.Currency {
 		err := fmt.Errorf("account [%d] currency mismatch: %s vs %s", toAccount.ID, toAccount.Currency, req.Currency)
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 

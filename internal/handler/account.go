@@ -92,7 +92,7 @@ type getAccountRequest struct {
 func (h *AccountHandler) handleGetAccount(ctx *gin.Context) {
 	var req getAccountRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -128,7 +128,7 @@ type listAccountRequest struct {
 func (h *AccountHandler) handleListAccounts(ctx *gin.Context) {
 	var req listAccountRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 

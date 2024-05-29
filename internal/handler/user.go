@@ -10,6 +10,13 @@ import (
 	"github.com/marco-almeida/mybank/internal/service"
 )
 
+// AuthService defines the methods that the auth handler will use
+type AuthService interface {
+	Create(ctx context.Context, user service.CreateUserParams) (db.User, error)
+	Login(ctx context.Context, req service.LoginUserParams) (service.LoginUserResponse, error)
+	RenewAccessToken(ctx context.Context, req service.RenewAccessTokenRequest) (service.RenewAccessTokenResponse, error)
+}
+
 // UserService defines the methods that the user handler will use
 type UserService interface {
 	// GetAll(context context.Context, limit, offset int64) ([]db.User, error)
@@ -76,7 +83,7 @@ func newUserResponse(user db.User) userResponse {
 func (h *UserHandler) handleCreateUser(ctx *gin.Context) {
 	var req createUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -89,11 +96,7 @@ func (h *UserHandler) handleCreateUser(ctx *gin.Context) {
 
 	user, err := h.authSvc.Create(ctx, arg)
 	if err != nil {
-		if db.ErrorCode(err) == db.UniqueViolation {
-			ctx.JSON(http.StatusForbidden, errorResponse(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -109,7 +112,7 @@ type loginUserRequest struct {
 func (h *UserHandler) handleLoginUser(ctx *gin.Context) {
 	var req loginUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -121,7 +124,7 @@ func (h *UserHandler) handleLoginUser(ctx *gin.Context) {
 	})
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -135,7 +138,7 @@ type renewAccessTokenRequest struct {
 func (h *UserHandler) handleRenewAccessToken(ctx *gin.Context) {
 	var req renewAccessTokenRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -144,7 +147,7 @@ func (h *UserHandler) handleRenewAccessToken(ctx *gin.Context) {
 	})
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 

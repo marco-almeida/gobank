@@ -23,8 +23,8 @@ Technical features:
 - [X] Versioning
 - [X] Pagination
 - [ ] Error Handling (via middleware)
-- [X] Authentication (via middleware)
-- [X] Authorization (via middleware)
+- [X] Authentication and Authorization (via middleware)
+- [X] Role-based access control
 - [ ] Per-user rate limiting (via middleware)
 - [X] Persistent storage (with PostgreSQL)
 - [X] Secure configuration
@@ -33,8 +33,6 @@ Technical features:
 - [X] Containerization (using docker multi-stage builds)
 - [X] Container Orchestration (using docker compose)
 - [X] Graceful shutdown
-- [ ] Event streaming along with WebSockets or Server-Sent Events to notify clients of requested actions
-- [ ] Caching with Redis/Memcached
 - [ ] Testing (with coverage analysis) triggered by CI/CD
 
 ## Project Layout

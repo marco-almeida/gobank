@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/marco-almeida/mybank/internal"
 	"github.com/marco-almeida/mybank/internal/pkg"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 	"github.com/marco-almeida/mybank/internal/token"
@@ -53,7 +54,7 @@ func (s *AuthService) Create(ctx context.Context, user CreateUserParams) (db.Use
 	// validate CreateUserParams
 	err := validate.Struct(user)
 	if err != nil {
-		return db.User{}, fmt.Errorf("invalid params: %w", err)
+		return db.User{}, fmt.Errorf("%w; %w", internal.ErrInvalidParams, err)
 	}
 
 	// hash plaintext password
@@ -99,15 +100,15 @@ type userResponse struct {
 func (s *AuthService) Login(ctx context.Context, req LoginUserParams) (LoginUserResponse, error) {
 	user, err := s.userSvc.Get(ctx, req.Username)
 	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			return LoginUserResponse{}, fmt.Errorf("user not found: %w", err)
+		if errors.Is(err, internal.ErrNoRows) {
+			return LoginUserResponse{}, fmt.Errorf("%w; user not found: %w", internal.ErrInvalidCredentials, err)
 		}
-		return LoginUserResponse{}, fmt.Errorf("internal server error: %w", err)
+		return LoginUserResponse{}, err
 	}
 
 	err = pkg.CheckPassword(req.Password, user.HashedPassword)
 	if err != nil {
-		return LoginUserResponse{}, fmt.Errorf("invalid password: %w", err)
+		return LoginUserResponse{}, fmt.Errorf("%w; %w", internal.ErrInvalidCredentials, err)
 	}
 
 	accessToken, accessPayload, err := s.tokenMaker.CreateToken(
@@ -169,12 +170,12 @@ type RenewAccessTokenResponse struct {
 func (s *AuthService) RenewAccessToken(ctx context.Context, req RenewAccessTokenRequest) (RenewAccessTokenResponse, error) {
 	refreshPayload, err := s.tokenMaker.VerifyToken(req.RefreshToken)
 	if err != nil {
-		return RenewAccessTokenResponse{}, fmt.Errorf("invalid refresh token: %w", err)
+		return RenewAccessTokenResponse{}, fmt.Errorf("%w; %w", internal.ErrInvalidToken, err)
 	}
 
 	session, err := s.sessionRepo.Get(ctx, refreshPayload.ID)
 	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
+		if errors.Is(err, internal.ErrNoRows) {
 			return RenewAccessTokenResponse{}, fmt.Errorf("session not found: %w", err)
 		}
 		return RenewAccessTokenResponse{}, fmt.Errorf("internal server error: %w", err)
@@ -182,22 +183,22 @@ func (s *AuthService) RenewAccessToken(ctx context.Context, req RenewAccessToken
 
 	if session.IsBlocked {
 		err := fmt.Errorf("blocked session")
-		return RenewAccessTokenResponse{}, fmt.Errorf("session is blocked: %w", err)
+		return RenewAccessTokenResponse{}, fmt.Errorf("%w; session is blocked: %w", internal.ErrInvalidToken, err)
 	}
 
 	if session.Username != refreshPayload.Username {
 		err := fmt.Errorf("incorrect session user")
-		return RenewAccessTokenResponse{}, fmt.Errorf("session user mismatch: %w", err)
+		return RenewAccessTokenResponse{}, fmt.Errorf("%w; session user mismatch: %w", internal.ErrInvalidToken, err)
 	}
 
 	if session.RefreshToken != req.RefreshToken {
 		err := fmt.Errorf("mismatched session token")
-		return RenewAccessTokenResponse{}, fmt.Errorf("session token mismatch: %w", err)
+		return RenewAccessTokenResponse{}, fmt.Errorf("%w; session token mismatch: %w", internal.ErrInvalidToken, err)
 	}
 
 	if time.Now().After(session.ExpiresAt) {
 		err := fmt.Errorf("expired session")
-		return RenewAccessTokenResponse{}, fmt.Errorf("session expired: %w", err)
+		return RenewAccessTokenResponse{}, fmt.Errorf("%w; session expired: %w", internal.ErrInvalidToken, err)
 	}
 
 	accessToken, accessPayload, err := s.tokenMaker.CreateToken(

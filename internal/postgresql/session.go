@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/marco-almeida/mybank/internal"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 )
 
@@ -21,9 +22,19 @@ func NewSessionRepository(connPool *pgxpool.Pool) *SessionRepository {
 }
 
 func (sessionRepo *SessionRepository) Create(ctx context.Context, arg db.CreateSessionParams) (db.Session, error) {
-	return sessionRepo.q.CreateSession(ctx, arg)
+	session, err := sessionRepo.q.CreateSession(ctx, arg)
+	if err != nil {
+		return db.Session{}, internal.DBErrorToInternal(err)
+	}
+
+	return session, nil
 }
 
 func (sessionRepo *SessionRepository) Get(ctx context.Context, id uuid.UUID) (db.Session, error) {
-	return sessionRepo.q.GetSession(ctx, id)
+	session, err := sessionRepo.q.GetSession(ctx, id)
+	if err != nil {
+		return db.Session{}, internal.DBErrorToInternal(err)
+	}
+
+	return session, nil
 }
