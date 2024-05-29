@@ -10,30 +10,32 @@ This project can be considered as a refactor and extension of techschool's cours
 ## Features
 
 - [X] User creation
-- [x] Account creation
-- [x] Deposits
-- [x] Withdrawals
-- [ ] Transfers
+- [X] Account creation
+- [X] Transfers
+- [ ] Deposits
+- [ ] Withdrawals
 
 Technical features:
 
-- [x] Project layout
-- [x] Dependency Injection
-- [x] Authentication (via middleware)
-- [x] Authorization (via middleware)
-- [x] Logging (via middleware)
-- [x] Persistent storage (with PostgreSQL)
-- [x] Secure configuration
-- [x] OpenAPI 3 documentation
-- [x] Versioning
-- [x] Pagination
-- [x] Per-user rate limiting (via middleware)
-- [x] Dockerization (with multi-stage builds)
-- [x] Graceful shutdown
-- [x] Database migrations
+- [X] Project layout
+- [X] Dependency Injection
+- [X] Rest API
+- [X] Versioning
+- [X] Pagination
+- [ ] Error Handling (via middleware)
+- [X] Authentication (via middleware)
+- [X] Authorization (via middleware)
+- [ ] Per-user rate limiting (via middleware)
+- [X] Persistent storage (with PostgreSQL)
+- [X] Secure configuration
+- [X] OpenAPI documentation
+- [X] Database migrations
+- [X] Containerization (using docker multi-stage builds)
+- [X] Container Orchestration (using docker compose)
+- [X] Graceful shutdown
 - [ ] Event streaming along with WebSockets or Server-Sent Events to notify clients of requested actions
 - [ ] Caching with Redis/Memcached
-- [ ] Testing (with coverage) triggered by CI/CD
+- [ ] Testing (with coverage analysis) triggered by CI/CD
 
 ## Project Layout
 
@@ -49,7 +51,6 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
   - `handler`: API code containing the handlers.
   - `config`: Configuration code.
   - `pkg`: Code shared by the internal packages.
-  - `middleware`: API code containing middlewares.
   - `postgresql`: PostgreSQL interaction code.
   - `service`: Business logic code called by the handlers.
 - `api`: OpenAPI/Swagger specs, JSON schema files, protocol definition files.
@@ -57,6 +58,10 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
 ## Architecture
 
 Layered/Onion Architecture. Before server creation, the layers are instantiated and configured using dependency injection.
+
+Service interfaces are defined in the handler package and implemented in the service package.
+Repository interfaces are defined in the service package and implemented in the postgresql package.
+This way, the layers are decoupled from each other.s
 
 ## Getting Started
 
@@ -100,4 +105,4 @@ Access the API at <http://localhost:3000>.
 
 ## Documentation
 
-OpenAPI 3 documentation is available at <https://github.com/marco-almeida/mybank/blob/main/api/openapi.yaml>.
+OpenAPI documentation is available at <https://github.com/marco-almeida/mybank/blob/main/api/openapi.yaml>.
