@@ -22,7 +22,7 @@ Technical features:
 - [X] Rest API
 - [X] Versioning
 - [X] Pagination
-- [ ] Error Handling (via middleware)
+- [X] Error Handling (via middleware)
 - [X] Authentication and Authorization (via middleware)
 - [X] Role-based access control
 - [ ] Per-user rate limiting (via middleware)
@@ -49,6 +49,7 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
   - `handler`: API code containing the handlers.
   - `config`: Configuration code.
   - `pkg`: Code shared by the internal packages.
+  - `middleware`: Middlewares used by the handlers/router.
   - `postgresql`: PostgreSQL interaction code.
   - `service`: Business logic code called by the handlers.
 - `api`: OpenAPI/Swagger specs, JSON schema files, protocol definition files.

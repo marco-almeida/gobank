@@ -7,10 +7,27 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
+	"github.com/marco-almeida/mybank/internal"
+	"github.com/marco-almeida/mybank/internal/middleware"
 	"github.com/marco-almeida/mybank/internal/pkg"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 	"github.com/marco-almeida/mybank/internal/token"
 )
+
+func init() {
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("currency", validCurrency)
+	}
+}
+
+var validCurrency validator.Func = func(fieldLevel validator.FieldLevel) bool {
+	if currency, ok := fieldLevel.Field().Interface().(string); ok {
+		return pkg.IsSupportedCurrency(currency)
+	}
+	return false
+}
 
 // TransferService defines the methods that the transfer handler will use
 type TransferService interface {
@@ -33,8 +50,8 @@ func NewTransferHandler(transferSvc TransferService, accountSvc AccountService) 
 
 // RegisterRoutes connects the handlers to the router
 func (h *TransferHandler) RegisterRoutes(r *gin.Engine, tokenMaker token.Maker) {
-	authRoutes := r.Group("/").Use(authMiddleware(tokenMaker, []string{pkg.DepositorRole}))
-	authRoutes.POST("/api/v1/transfers", h.handleCreateTransfer)
+	authRoutes := r.Group("/api").Use(middleware.Authentication(tokenMaker, []string{pkg.DepositorRole}))
+	authRoutes.POST("/v1/transfers", h.handleCreateTransfer)
 }
 
 type transferRequest struct {
@@ -53,41 +70,38 @@ func (h *TransferHandler) handleCreateTransfer(ctx *gin.Context) {
 
 	fromAccount, err := h.accountSvc.Get(ctx, req.FromAccountID)
 	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
+		if errors.Is(err, internal.ErrNoRows) {
+			ctx.JSON(http.StatusBadRequest, internal.RenderErrorResponse("invalid from account"))
 			return
 		}
-
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
-	if fromAccount.Currency != req.Currency {
-		err := fmt.Errorf("account [%d] currency mismatch: %s vs %s", fromAccount.ID, fromAccount.Currency, req.Currency)
 		ctx.Error(err)
 		return
 	}
 
-	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if fromAccount.Currency != req.Currency {
+		ctx.Error(internal.ErrCurrencyMismatch)
+		return
+	}
+
+	authPayload := ctx.MustGet(middleware.AuthorizationPayloadKey).(*token.Payload)
 	if fromAccount.Owner != authPayload.Username {
 		err := errors.New("from account doesn't belong to the authenticated user")
-		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		ctx.Error(fmt.Errorf("%w; from account doesn't belong to the authenticated user: %w", internal.ErrForbidden, err))
 		return
 	}
 
 	toAccount, err := h.accountSvc.Get(ctx, req.ToAccountID)
 	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
+		if errors.Is(err, internal.ErrNoRows) {
+			ctx.JSON(http.StatusBadRequest, internal.RenderErrorResponse("invalid to account"))
 			return
 		}
-
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
 	if toAccount.Currency != req.Currency {
-		err := fmt.Errorf("account [%d] currency mismatch: %s vs %s", toAccount.ID, toAccount.Currency, req.Currency)
+		err := fmt.Errorf("%w: account [%d] currency mismatch: %s vs %s", internal.ErrCurrencyMismatch, toAccount.ID, toAccount.Currency, req.Currency)
 		ctx.Error(err)
 		return
 	}
@@ -100,7 +114,7 @@ func (h *TransferHandler) handleCreateTransfer(ctx *gin.Context) {
 
 	result, err := h.transferSvc.CreateTx(ctx, arg)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 

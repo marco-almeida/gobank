@@ -54,7 +54,7 @@ func (s *AuthService) Create(ctx context.Context, user CreateUserParams) (db.Use
 	// validate CreateUserParams
 	err := validate.Struct(user)
 	if err != nil {
-		return db.User{}, fmt.Errorf("%w; %w", internal.ErrInvalidParams, err)
+		return db.User{}, err
 	}
 
 	// hash plaintext password

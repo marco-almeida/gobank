@@ -7,7 +7,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
+	"github.com/marco-almeida/mybank/internal"
+	"github.com/marco-almeida/mybank/internal/middleware"
 	"github.com/marco-almeida/mybank/internal/pkg"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 	"github.com/marco-almeida/mybank/internal/token"
@@ -34,12 +35,12 @@ func NewAccountHandler(accountSvc AccountService) *AccountHandler {
 
 // RegisterRoutes connects the handlers to the router
 func (h *AccountHandler) RegisterRoutes(r *gin.Engine, tokenMaker token.Maker) {
-	authRoutes := r.Group("/api").Use(authMiddleware(tokenMaker, []string{pkg.DepositorRole}))
+	authRoutes := r.Group("/api").Use(middleware.Authentication(tokenMaker, []string{pkg.DepositorRole, pkg.BankerRole}))
 	authRoutes.POST("/v1/accounts", h.handleCreateAccount)
 	authRoutes.GET("/v1/accounts/:id", h.handleGetAccount)
 	authRoutes.GET("/v1/accounts", h.handleListAccounts)
 
-	adminRoutes := r.Group("/api").Use(authMiddleware(tokenMaker, []string{pkg.BankerRole}))
+	adminRoutes := r.Group("/api").Use(middleware.Authentication(tokenMaker, []string{pkg.BankerRole}))
 	adminRoutes.DELETE("/v1/accounts/:id", nil) // only accessible by bank workers (or admins)
 }
 
@@ -50,21 +51,11 @@ type createAccountRequest struct {
 func (h *AccountHandler) handleCreateAccount(ctx *gin.Context) {
 	var req createAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		var errorMessage string
-		var validationErrors validator.ValidationErrors
-		if errors.As(err, &validationErrors) {
-			validationError := validationErrors[0]
-			if validationError.Tag() == "required" {
-				errorMessage = fmt.Sprintf("%s not provided", validationError.Field())
-			}
-		}
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": errorMessage})
+		ctx.Error(err)
 		return
-		// ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		// return
 	}
 
-	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	authPayload := ctx.MustGet(middleware.AuthorizationPayloadKey).(*token.Payload)
 	arg := db.CreateAccountParams{
 		Owner:    authPayload.Username,
 		Currency: req.Currency,
@@ -73,12 +64,11 @@ func (h *AccountHandler) handleCreateAccount(ctx *gin.Context) {
 
 	account, err := h.accountSvc.Create(ctx, arg)
 	if err != nil {
-		errCode := db.ErrorCode(err)
-		if errCode == db.ForeignKeyViolation || errCode == db.UniqueViolation {
-			ctx.JSON(http.StatusForbidden, errorResponse(err))
+		if errors.Is(err, internal.ErrUniqueConstraintViolation) {
+			ctx.JSON(http.StatusConflict, internal.RenderErrorResponse("account already exists"))
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
@@ -98,21 +88,17 @@ func (h *AccountHandler) handleGetAccount(ctx *gin.Context) {
 
 	account, err := h.accountSvc.Get(ctx, req.ID)
 	if err != nil {
-		if errors.Is(err, db.ErrRecordNotFound) {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 
-	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
-	overridePermission := ctx.MustGet("override_permission").(bool)
+	authPayload := ctx.MustGet(middleware.AuthorizationPayloadKey).(*token.Payload)
+	overridePermission := ctx.MustGet(middleware.OverridePermissionKey).(bool)
 	// needs refactoring
 	if !overridePermission {
 		if account.Owner != authPayload.Username {
 			err := errors.New("account doesn't belong to the authenticated user")
-			ctx.JSON(http.StatusForbidden, errorResponse(err))
+			ctx.Error(fmt.Errorf("%w: %s", internal.ErrNoRows, err.Error())) // user shouldnt know about other accounts
 			return
 		}
 	}
@@ -132,7 +118,7 @@ func (h *AccountHandler) handleListAccounts(ctx *gin.Context) {
 		return
 	}
 
-	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	authPayload := ctx.MustGet(middleware.AuthorizationPayloadKey).(*token.Payload)
 	arg := db.ListAccountsParams{
 		Owner:  authPayload.Username,
 		Limit:  req.PageSize,
@@ -141,7 +127,7 @@ func (h *AccountHandler) handleListAccounts(ctx *gin.Context) {
 
 	accounts, err := h.accountSvc.List(ctx, arg)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		ctx.Error(err)
 		return
 	}
 

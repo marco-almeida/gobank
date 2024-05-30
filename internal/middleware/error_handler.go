@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,17 +10,6 @@ import (
 	"github.com/marco-almeida/mybank/internal"
 	"github.com/rs/zerolog/log"
 )
-
-// ErrorResponse represents a response containing an error message.
-type ErrorResponse struct {
-	Error       string            `json:"error"`
-	Validations []ValidationError `json:"validations,omitempty"`
-}
-
-type ValidationError struct {
-	Field string `json:"field"`
-	Tag   string `json:"tag"`
-}
 
 func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -33,21 +23,28 @@ func ErrorHandler() gin.HandlerFunc {
 			switch {
 			// check if error has validator.ValidationErrors
 			case errors.As(unwrappedErr, &validationErrors):
-				errorResponse := ErrorResponse{
+				errorResponse := internal.ErrorResponse{
 					Error: http.StatusText(http.StatusBadRequest),
 				}
 				for e := range validationErrors {
-					errorResponse.Validations = append(errorResponse.Validations, ValidationError{
+					errorResponse.Validations = append(errorResponse.Validations, internal.ValidationError{
 						// field should be json representation of field
-						Field: validationErrors[e].Field(),
-						Tag:   validationErrors[e].Tag(),
+						Field:   validationErrors[e].Field(),
+						Tag:     validationErrors[e].Tag(),
+						Message: validationErrorToText(validationErrors[e]),
 					})
 				}
 				c.JSON(http.StatusBadRequest, errorResponse)
 			case errors.Is(unwrappedErr, internal.ErrInvalidCredentials):
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+			case errors.Is(unwrappedErr, internal.ErrAccountAlreadyExists):
+				c.JSON(http.StatusBadRequest, gin.H{"error": "account already exists"})
 			case errors.Is(unwrappedErr, internal.ErrInvalidToken):
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			case errors.Is(unwrappedErr, internal.ErrCurrencyMismatch):
+				c.JSON(http.StatusBadRequest, gin.H{"error": "currency mismatch"})
+			case errors.Is(unwrappedErr, internal.ErrForbidden):
+				c.JSON(http.StatusForbidden, gin.H{"error": http.StatusText(http.StatusForbidden)})
 			case errors.Is(unwrappedErr, internal.ErrForeignKeyConstraintViolation):
 				c.JSON(http.StatusConflict, gin.H{"error": http.StatusText(http.StatusConflict)})
 			case errors.Is(unwrappedErr, internal.ErrUniqueConstraintViolation):
@@ -61,4 +58,20 @@ func ErrorHandler() gin.HandlerFunc {
 			logLevel.Err(unwrappedErr).Send()
 		}
 	}
+}
+
+func validationErrorToText(e validator.FieldError) string {
+	switch e.Tag() {
+	case "required":
+		return fmt.Sprintf("%s is required", e.Field())
+	case "max":
+		return fmt.Sprintf("%s cannot be longer than %s", e.Field(), e.Param())
+	case "min":
+		return fmt.Sprintf("%s must be longer than %s", e.Field(), e.Param())
+	case "email":
+		return fmt.Sprintf("Invalid email format")
+	case "len":
+		return fmt.Sprintf("%s must be %s characters long", e.Field(), e.Param())
+	}
+	return fmt.Sprintf("%s is not valid", e.Field())
 }

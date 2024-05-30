@@ -45,9 +45,10 @@ func NewUserHandler(userSvc UserService, authSvc AuthService) *UserHandler {
 
 // RegisterRoutes connects the handlers to the router
 func (h *UserHandler) RegisterRoutes(r *gin.Engine) {
-	r.POST("/api/v1/users", h.handleCreateUser)
-	r.POST("/api/v1/users/login", h.handleLoginUser)
-	r.POST("/api/v1/users/renew_access", h.handleRenewAccessToken)
+	groupRoutes := r.Group("/api")
+	groupRoutes.POST("/v1/users", h.handleCreateUser)
+	groupRoutes.POST("/v1/users/login", h.handleLoginUser)
+	groupRoutes.POST("/v1/users/renew_access", h.handleRenewAccessToken)
 	// r.HandleFunc("GET /v1/users", h.authSvc.WithJWTMiddleware(h.handleGetAllUsers))
 	// r.HandleFunc("GET /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleGetUser))
 	// r.HandleFunc("DELETE /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleUserDelete))

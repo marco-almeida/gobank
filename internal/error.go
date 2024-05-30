@@ -8,16 +8,27 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+// ErrorResponse represents a response containing an error message.
+type ErrorResponse struct {
+	Error       string            `json:"error"`
+	Validations []ValidationError `json:"validations,omitempty"`
+}
+
+type ValidationError struct {
+	Field   string `json:"field"`
+	Tag     string `json:"tag"`
+	Message string `json:"message"`
+}
+
 var (
 	ErrUniqueConstraintViolation     = errors.New("unique constraint violation")
 	ErrForeignKeyConstraintViolation = errors.New("foreign key constraint violation")
 	ErrNoRows                        = errors.New("no rows in result set")
-	ErrUnauthorized                  = errors.New("unauthorized")
 	ErrInvalidToken                  = errors.New("invalid token")
 	ErrInvalidCredentials            = errors.New("wrong password")
-	ErrInvalidParams                 = errors.New("invalid params")
+	ErrAccountAlreadyExists          = errors.New("account already exists")
+	ErrCurrencyMismatch              = errors.New("currency mismatch")
 	ErrForbidden                     = errors.New("forbidden")
-	ErrInternal                      = errors.New("internal error")
 )
 
 // db error to internal error
@@ -33,8 +44,14 @@ func DBErrorToInternal(err error) error {
 		case "23505":
 			return fmt.Errorf("%w: %s", ErrUniqueConstraintViolation, pgErr.Detail)
 		default:
-			return fmt.Errorf("%w: %s", ErrInternal, pgErr.Detail)
+			return err
 		}
 	}
 	return err
+}
+
+func RenderErrorResponse(msg string) ErrorResponse {
+	return ErrorResponse{
+		Error: msg,
+	}
 }
