@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	"github.com/marco-almeida/mybank/internal"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 )
 
@@ -26,7 +29,15 @@ func NewAccountService(repo AccountRepository) *AccountService {
 }
 
 func (s *AccountService) Create(ctx context.Context, account db.CreateAccountParams) (db.Account, error) {
-	return s.repo.Create(ctx, account)
+	acc, err := s.repo.Create(ctx, account)
+	if err != nil {
+		if errors.Is(err, internal.ErrUniqueConstraintViolation) {
+			return db.Account{}, fmt.Errorf("%w: %s", internal.ErrAccountAlreadyExists, err.Error())
+		}
+		return db.Account{}, err
+	}
+
+	return acc, nil
 }
 
 func (s *AccountService) Get(ctx context.Context, id int64) (db.Account, error) {

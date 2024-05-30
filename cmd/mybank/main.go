@@ -22,6 +22,7 @@ import (
 
 	"github.com/marco-almeida/mybank/internal/config"
 	"github.com/marco-almeida/mybank/internal/handler"
+	"github.com/marco-almeida/mybank/internal/middleware"
 	"github.com/marco-almeida/mybank/internal/postgresql"
 	"github.com/marco-almeida/mybank/internal/service"
 	"github.com/marco-almeida/mybank/internal/token"
@@ -116,6 +117,7 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 	}
 
 	router := gin.Default()
+	router.Use(middleware.ErrorHandler())
 
 	srv := &http.Server{
 		Addr:              config.HTTPServerAddress,

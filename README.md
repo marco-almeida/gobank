@@ -22,10 +22,9 @@ Technical features:
 - [X] Rest API
 - [X] Versioning
 - [X] Pagination
-- [ ] Error Handling (via middleware)
-- [X] Authentication (via middleware)
-- [X] Authorization (via middleware)
-- [ ] Per-user rate limiting (via middleware)
+- [X] Error Handling (via middleware)
+- [X] Authentication and Authorization (via middleware)
+- [X] Role-based access control
 - [X] Persistent storage (with PostgreSQL)
 - [X] Secure configuration
 - [X] OpenAPI documentation
@@ -33,8 +32,6 @@ Technical features:
 - [X] Containerization (using docker multi-stage builds)
 - [X] Container Orchestration (using docker compose)
 - [X] Graceful shutdown
-- [ ] Event streaming along with WebSockets or Server-Sent Events to notify clients of requested actions
-- [ ] Caching with Redis/Memcached
 - [ ] Testing (with coverage analysis) triggered by CI/CD
 
 ## Project Layout
@@ -51,6 +48,7 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
   - `handler`: API code containing the handlers.
   - `config`: Configuration code.
   - `pkg`: Code shared by the internal packages.
+  - `middleware`: Middlewares used by the handlers/router.
   - `postgresql`: PostgreSQL interaction code.
   - `service`: Business logic code called by the handlers.
 - `api`: OpenAPI/Swagger specs, JSON schema files, protocol definition files.

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/marco-almeida/mybank/internal"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 )
 
@@ -20,13 +21,25 @@ func NewAccountRepository(connPool *pgxpool.Pool) *AccountRepository {
 }
 
 func (accountRepo *AccountRepository) Create(ctx context.Context, arg db.CreateAccountParams) (db.Account, error) {
-	return accountRepo.q.CreateAccount(ctx, arg)
+	account, err := accountRepo.q.CreateAccount(ctx, arg)
+	if err != nil {
+		return db.Account{}, internal.DBErrorToInternal(err)
+	}
+	return account, nil
 }
 
 func (accountRepo *AccountRepository) Get(ctx context.Context, id int64) (db.Account, error) {
-	return accountRepo.q.GetAccount(ctx, id)
+	account, err := accountRepo.q.GetAccount(ctx, id)
+	if err != nil {
+		return db.Account{}, internal.DBErrorToInternal(err)
+	}
+	return account, nil
 }
 
 func (accountRepo *AccountRepository) List(ctx context.Context, arg db.ListAccountsParams) ([]db.Account, error) {
-	return accountRepo.q.ListAccounts(ctx, arg)
+	accounts, err := accountRepo.q.ListAccounts(ctx, arg)
+	if err != nil {
+		return []db.Account{}, internal.DBErrorToInternal(err)
+	}
+	return accounts, nil
 }
