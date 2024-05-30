@@ -2,10 +2,12 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/marco-almeida/mybank/internal"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 	"github.com/marco-almeida/mybank/internal/service"
 )
@@ -84,7 +86,7 @@ func newUserResponse(user db.User) userResponse {
 func (h *UserHandler) handleCreateUser(ctx *gin.Context) {
 	var req createUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.Error(err)
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
 		return
 	}
 
@@ -113,7 +115,7 @@ type loginUserRequest struct {
 func (h *UserHandler) handleLoginUser(ctx *gin.Context) {
 	var req loginUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.Error(err)
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
 		return
 	}
 
@@ -139,7 +141,7 @@ type renewAccessTokenRequest struct {
 func (h *UserHandler) handleRenewAccessToken(ctx *gin.Context) {
 	var req renewAccessTokenRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.Error(err)
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
 		return
 	}
 

@@ -2,6 +2,7 @@
 
 ![test workflow](https://github.com/marco-almeida/mybank/actions/workflows/test.yml/badge.svg)
 [![codecov](https://codecov.io/gh/marco-almeida/mybank/branch/main/graph/badge.svg)](https://codecov.io/gh/marco-almeida/mybank)
+![Go Version](https://img.shields.io/badge/go%20version-%3E=1.22-61CFDD.svg?style=flat-square)
 
 Bank API implemented with Golang's Gin, PostgreSQL, and Redis.
 
@@ -27,6 +28,7 @@ Technical features:
 - [X] Pagination
 - [X] Error Handling (via middleware)
 - [X] Authentication and Authorization (via middleware)
+- [X] Rate Limiting per IP (via middleware)
 - [X] Role-based access control
 - [X] Persistent storage (with PostgreSQL)
 - [X] Secure configuration
@@ -62,7 +64,7 @@ Layered/Onion Architecture. Before server creation, the layers are instantiated 
 
 Service interfaces are defined in the handler package and implemented in the service package.
 Repository interfaces are defined in the service package and implemented in the postgresql package.
-This way, the layers are decoupled from each other.s
+This way, the layers are decoupled from each other.
 
 ## Getting Started
 
