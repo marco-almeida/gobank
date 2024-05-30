@@ -25,7 +25,6 @@ Technical features:
 - [X] Error Handling (via middleware)
 - [X] Authentication and Authorization (via middleware)
 - [X] Role-based access control
-- [ ] Per-user rate limiting (via middleware)
 - [X] Persistent storage (with PostgreSQL)
 - [X] Secure configuration
 - [X] OpenAPI documentation
