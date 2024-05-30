@@ -1,5 +1,8 @@
 # mybank
 
+![test workflow](https://github.com/marco-almeida/mybank/actions/workflows/test.yml/badge.svg)
+[![codecov](https://codecov.io/gh/marco-almeida/mybank/branch/main/graph/badge.svg)](https://codecov.io/gh/marco-almeida/mybank)
+
 Bank API implemented with Golang's Gin, PostgreSQL, and Redis.
 
 It is a REST API that allows for the creation of users, accounts related to users, deposits, withdrawals, and transfers.
@@ -32,7 +35,7 @@ Technical features:
 - [X] Containerization (using docker multi-stage builds)
 - [X] Container Orchestration (using docker compose)
 - [X] Graceful shutdown
-- [ ] Testing (with coverage analysis) triggered by CI/CD
+- [X] Testing (with coverage analysis) triggered by CI/CD
 
 ## Project Layout
 

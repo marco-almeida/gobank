@@ -116,7 +116,9 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery())
+	router.Use(middleware.Logger())
 	router.Use(middleware.ErrorHandler())
 
 	srv := &http.Server{
