@@ -60,8 +60,10 @@ jobs:
           echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> testing.env
           echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> testing.env
 
-      - name: Run coverage[![codecov](https://codecov.io/gh/MarioCarrion/todo-api-microservice-example/branch/main/graph/badge.svg)](https://codecov.io/gh/MarioCarrion/todo-api-microservice-example)
-        run: go test -coverprofile=coverage.out ./...
-
+      - name: Run coverage
+        run: go test -short -coverprofile=coverage.txt ./...
+        
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_ORG_TOKEN }}
