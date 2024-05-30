@@ -64,10 +64,6 @@ func (h *AccountHandler) handleCreateAccount(ctx *gin.Context) {
 
 	account, err := h.accountSvc.Create(ctx, arg)
 	if err != nil {
-		if errors.Is(err, internal.ErrUniqueConstraintViolation) {
-			ctx.JSON(http.StatusConflict, internal.RenderErrorResponse("account already exists"))
-			return
-		}
 		ctx.Error(err)
 		return
 	}
