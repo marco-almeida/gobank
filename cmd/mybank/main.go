@@ -41,8 +41,6 @@ func main() {
 		log.Fatal().Err(err).Msg("cannot load config")
 	}
 
-	fmt.Printf("%+v\n", config)
-
 	setupLogging(config)
 
 	// setup graceful shutdown signals
@@ -67,6 +65,15 @@ func main() {
 
 	// running in waitgroup coroutine in order to wait for graceful shutdown
 	waitGroup, ctx := errgroup.WithContext(ctx)
+
+	// redisOpt := asynq.RedisClientOpt{
+	// 	Addr: config.RedisAddress,
+	// }
+
+	// store := db.NewStore(connPool)
+
+	// taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
+	// runTaskProcessor(ctx, waitGroup, config, redisOpt, store)
 	runHTPPServer(ctx, waitGroup, config, connPool)
 
 	err = waitGroup.Wait()
@@ -111,14 +118,42 @@ func runDBMigration(migrationURL string, dbSource string) error {
 	return nil
 }
 
+// func runTaskProcessor(
+// 	ctx context.Context,
+// 	waitGroup *errgroup.Group,
+// 	config config.Config,
+// 	redisOpt asynq.RedisClientOpt,
+// 	store db.Store,
+// ) {
+// 	mailer := service.NewGmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
+// 	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer)
+
+// 	log.Info().Msg("start task processor")
+// 	err := taskProcessor.Start()
+// 	if err != nil {
+// 		log.Fatal().Err(err).Msg("failed to start task processor")
+// 	}
+
+// 	waitGroup.Go(func() error {
+// 		<-ctx.Done()
+// 		log.Info().Msg("graceful shutdown task processor")
+
+// 		taskProcessor.Shutdown()
+// 		log.Info().Msg("task processor is stopped")
+
+// 		return nil
+// 	})
+// }
+
 func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, error) {
 	if config.Environment != "development" && config.Environment != "testing" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	router := gin.New()
-	router.Use(gin.Recovery())
 	router.Use(middleware.Logger())
+	router.Use(gin.Recovery())
+	router.Use(middleware.RateLimiter())
 	router.Use(middleware.ErrorHandler())
 
 	srv := &http.Server{
@@ -128,6 +163,13 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 		WriteTimeout:      10 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       10 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
+
+	// init token maker
+	tokenMaker, err := token.NewJWTMaker(config.JWTSecret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create token maker: %w", err)
 	}
 
 	// init user repo
@@ -136,20 +178,14 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 	// init session repo
 	sessionRepo := postgresql.NewSessionRepository(connPool)
 
-	// init user service
-	userService := service.NewUserService(userRepo)
-
-	// init token maker
-	tokenMaker, err := token.NewJWTMaker(config.JWTSecret)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create token maker: %w", err)
-	}
-
 	// init auth service
-	authService := service.NewAuthService(*userService, sessionRepo, tokenMaker, config.AccessTokenDuration, config.RefreshTokenDuration)
+	authService := service.NewAuthService(userRepo, sessionRepo, tokenMaker, config.AccessTokenDuration, config.RefreshTokenDuration)
+
+	// init user service
+	userService := service.NewUserService(userRepo, authService)
 
 	// init user handler and register routes
-	handler.NewUserHandler(userService, authService).RegisterRoutes(router)
+	handler.NewUserHandler(userService).RegisterRoutes(router)
 
 	// init account repo
 	accountRepo := postgresql.NewAccountRepository(connPool)

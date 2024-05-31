@@ -12,36 +12,23 @@ import (
 	"github.com/marco-almeida/mybank/internal/service"
 )
 
-// AuthService defines the methods that the auth handler will use
-type AuthService interface {
-	Create(ctx context.Context, user service.CreateUserParams) (db.User, error)
-	Login(ctx context.Context, req service.LoginUserParams) (service.LoginUserResponse, error)
-	RenewAccessToken(ctx context.Context, req service.RenewAccessTokenRequest) (service.RenewAccessTokenResponse, error)
-}
-
 // UserService defines the methods that the user handler will use
 type UserService interface {
-	// GetAll(context context.Context, limit, offset int64) ([]db.User, error)
-	// Get(context context.Context, id int64) (db.User, error)
-	// GetByEmail(context context.Context, email string) (db.User, error)
-	Create(context context.Context, user db.CreateUserParams) (db.User, error)
+	Create(context context.Context, user service.CreateUserParams) (db.User, error)
 	Get(context context.Context, username string) (db.User, error)
-	// Delete(context context.Context, id int64) error
-	// Update(context context.Context, user db.UpdateUserParams) (db.User, error)
-	// PartialUpdate(context context.Context, id int64, user db.User) (db.User, error)
+	Login(context context.Context, req service.LoginUserParams) (service.LoginUserResponse, error)
+	RenewAccessToken(context context.Context, req service.RenewAccessTokenParams) (service.RenewAccessTokenResponse, error)
 }
 
 // UserHandler is the handler for the user service
 type UserHandler struct {
 	userSvc UserService
-	authSvc AuthService
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(userSvc UserService, authSvc AuthService) *UserHandler {
+func NewUserHandler(userSvc UserService) *UserHandler {
 	return &UserHandler{
 		userSvc: userSvc,
-		authSvc: authSvc,
 	}
 }
 
@@ -51,11 +38,6 @@ func (h *UserHandler) RegisterRoutes(r *gin.Engine) {
 	groupRoutes.POST("/v1/users", h.handleCreateUser)
 	groupRoutes.POST("/v1/users/login", h.handleLoginUser)
 	groupRoutes.POST("/v1/users/renew_access", h.handleRenewAccessToken)
-	// r.HandleFunc("GET /v1/users", h.authSvc.WithJWTMiddleware(h.handleGetAllUsers))
-	// r.HandleFunc("GET /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleGetUser))
-	// r.HandleFunc("DELETE /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleUserDelete))
-	// r.HandleFunc("PUT /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handleUpdateUser))
-	// r.HandleFunc("PATCH /v1/users/{user_id}", h.authSvc.WithJWTMiddleware(h.handlePartialUpdateUser))
 }
 
 type createUserRequest struct {
@@ -97,7 +79,7 @@ func (h *UserHandler) handleCreateUser(ctx *gin.Context) {
 		Email:             req.Email,
 	}
 
-	user, err := h.authSvc.Create(ctx, arg)
+	user, err := h.userSvc.Create(ctx, arg)
 	if err != nil {
 		ctx.Error(err)
 		return
@@ -119,7 +101,7 @@ func (h *UserHandler) handleLoginUser(ctx *gin.Context) {
 		return
 	}
 
-	rsp, err := h.authSvc.Login(ctx, service.LoginUserParams{
+	rsp, err := h.userSvc.Login(ctx, service.LoginUserParams{
 		Username:  req.Username,
 		Password:  req.Password,
 		UserAgent: ctx.Request.UserAgent(),
@@ -145,7 +127,7 @@ func (h *UserHandler) handleRenewAccessToken(ctx *gin.Context) {
 		return
 	}
 
-	rsp, err := h.authSvc.RenewAccessToken(ctx, service.RenewAccessTokenRequest{
+	rsp, err := h.userSvc.RenewAccessToken(ctx, service.RenewAccessTokenParams{
 		RefreshToken: req.RefreshToken,
 	})
 

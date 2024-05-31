@@ -12,22 +12,38 @@ type UserRepository interface {
 	Get(ctx context.Context, username string) (db.User, error)
 }
 
+type AuthService interface {
+	Create(ctx context.Context, user CreateUserParams) (db.User, error)
+	Login(ctx context.Context, req LoginUserParams) (LoginUserResponse, error)
+	RenewAccessToken(ctx context.Context, req RenewAccessTokenParams) (RenewAccessTokenResponse, error)
+}
+
 // UserService defines the application service in charge of interacting with Users.
 type UserService struct {
-	repo UserRepository
+	repo    UserRepository
+	authSvc AuthService
 }
 
 // NewUserService creates a new User service.
-func NewUserService(repo UserRepository) *UserService {
+func NewUserService(repo UserRepository, authSvc AuthService) *UserService {
 	return &UserService{
-		repo: repo,
+		repo:    repo,
+		authSvc: authSvc,
 	}
 }
 
-func (s *UserService) Create(ctx context.Context, user db.CreateUserParams) (db.User, error) {
-	return s.repo.Create(ctx, user)
+func (s *UserService) Create(ctx context.Context, user CreateUserParams) (db.User, error) {
+	return s.authSvc.Create(ctx, user)
 }
 
 func (s *UserService) Get(ctx context.Context, username string) (db.User, error) {
 	return s.repo.Get(ctx, username)
+}
+
+func (s *UserService) Login(ctx context.Context, req LoginUserParams) (LoginUserResponse, error) {
+	return s.authSvc.Login(ctx, req)
+}
+
+func (s *UserService) RenewAccessToken(ctx context.Context, req RenewAccessTokenParams) (RenewAccessTokenResponse, error) {
+	return s.authSvc.RenewAccessToken(ctx, req)
 }
