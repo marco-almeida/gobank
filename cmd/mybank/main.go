@@ -151,8 +151,11 @@ func newServer(config config.Config, connPool *pgxpool.Pool, redisOpt asynq.Redi
 	// init session repo
 	sessionRepo := postgresql.NewSessionRepository(connPool)
 
+	// init verify email repo
+	verifyEmailRepo := postgresql.NewVerifyEmailRepository(connPool)
+
 	// init auth service
-	authService := service.NewAuthService(userRepo, sessionRepo, tokenMaker, config.AccessTokenDuration, config.RefreshTokenDuration)
+	authService := service.NewAuthService(userRepo, sessionRepo, tokenMaker, config.AccessTokenDuration, config.RefreshTokenDuration, verifyEmailRepo)
 
 	// init userverifymail repo
 	userVerifyEmailRepo := redisRepo.NewUserMessageBrokerRepository(redisOpt)
@@ -243,7 +246,7 @@ func runTaskProcessor(
 		<-ctx.Done()
 		log.Info().Msg("shutting down task processor gracefully, press Ctrl+C again to force")
 
-		time.Sleep(2 * time.Second)
+		taskProcessor.Shutdown()
 		log.Info().Msg("task processor is stopped")
 
 		return nil

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/marco-almeida/mybank/internal"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 )
 
@@ -20,5 +21,19 @@ func NewVerifyEmailRepository(connPool *pgxpool.Pool) *VerifyEmailRepository {
 }
 
 func (verifyEmailRepo *VerifyEmailRepository) Create(ctx context.Context, arg db.CreateVerifyEmailParams) (db.VerifyEmail, error) {
-	return verifyEmailRepo.q.CreateVerifyEmail(ctx, arg)
+	ver, err := verifyEmailRepo.q.CreateVerifyEmail(ctx, arg)
+	if err != nil {
+		return db.VerifyEmail{}, internal.DBErrorToInternal(err)
+	}
+
+	return ver, nil
+}
+
+func (verifyEmailRepo *VerifyEmailRepository) Verify(ctx context.Context, arg db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error) {
+	res, err := verifyEmailRepo.q.VerifyEmailTx(ctx, arg)
+	if err != nil {
+		return db.VerifyEmailTxResult{}, internal.DBErrorToInternal(err)
+	}
+
+	return res, nil
 }

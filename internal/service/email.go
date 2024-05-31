@@ -16,6 +16,7 @@ const (
 
 type VerifyEmailRepository interface {
 	Create(ctx context.Context, arg db.CreateVerifyEmailParams) (db.VerifyEmail, error)
+	Verify(ctx context.Context, arg db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error)
 }
 
 type EmailService interface {

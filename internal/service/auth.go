@@ -27,19 +27,21 @@ type SessionRepository interface {
 type AuthServiceImpl struct {
 	sessionRepo          SessionRepository
 	userRepo             UserRepository
+	verifyEmailRepo      VerifyEmailRepository
 	tokenMaker           token.Maker
 	accessTokenDuration  time.Duration
 	refreshTokenDuration time.Duration
 }
 
 // NewAuthService creates a new Auth service.
-func NewAuthService(userRepo UserRepository, sessionRepo SessionRepository, tokenMaker token.Maker, accessTokenDuration time.Duration, refreshTokenDuration time.Duration) *AuthServiceImpl {
+func NewAuthService(userRepo UserRepository, sessionRepo SessionRepository, tokenMaker token.Maker, accessTokenDuration time.Duration, refreshTokenDuration time.Duration, verifyEmailRepo VerifyEmailRepository) *AuthServiceImpl {
 	return &AuthServiceImpl{
 		userRepo:             userRepo,
 		sessionRepo:          sessionRepo,
 		tokenMaker:           tokenMaker,
 		accessTokenDuration:  accessTokenDuration,
 		refreshTokenDuration: refreshTokenDuration,
+		verifyEmailRepo:      verifyEmailRepo,
 	}
 }
 
@@ -82,29 +84,6 @@ func (s *AuthServiceImpl) Create(ctx context.Context, req CreateUserTxParams) (d
 	})
 
 }
-
-// func (s *AuthServiceImpl) Create(ctx context.Context, user CreateUserParams) (db.User, error) {
-// 	// validate CreateUserParams
-// 	err := validate.Struct(user)
-// 	if err != nil {
-// 		return db.User{}, err
-// 	}
-
-// 	// hash plaintext password
-// 	hashedPassword, err := pkg.HashPassword(user.PlaintextPassword)
-// 	if err != nil {
-// 		return db.User{}, fmt.Errorf("cannot hash password: %w", err)
-// 	}
-
-// 	// call userRepo.Create
-// 	arg := db.CreateUserParams{
-// 		Username:       user.Username,
-// 		HashedPassword: hashedPassword,
-// 		FullName:       user.FullName,
-// 		Email:          user.Email,
-// 	}
-// 	return s.userRepo.Create(ctx, arg)
-// }
 
 type LoginUserParams struct {
 	Username  string `json:"username" validate:"required,alphanum"`
@@ -251,4 +230,8 @@ func (s *AuthServiceImpl) RenewAccessToken(ctx context.Context, req RenewAccessT
 		AccessToken:          accessToken,
 		AccessTokenExpiresAt: accessPayload.ExpiredAt,
 	}, nil
+}
+
+func (s *AuthServiceImpl) VerifyEmail(ctx context.Context, req db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error) {
+	return s.verifyEmailRepo.Verify(ctx, req)
 }

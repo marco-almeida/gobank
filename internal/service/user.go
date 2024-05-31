@@ -19,6 +19,7 @@ type AuthService interface {
 	Create(ctx context.Context, arg CreateUserTxParams) (db.CreateUserTxResult, error)
 	Login(ctx context.Context, req LoginUserParams) (LoginUserResponse, error)
 	RenewAccessToken(ctx context.Context, req RenewAccessTokenParams) (RenewAccessTokenResponse, error)
+	VerifyEmail(ctx context.Context, req db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error)
 	// CreateWithTx(ctx context.Context, arg db.CreateUserTxParams) (db.CreateUserTxResult, error)
 }
 
@@ -77,4 +78,8 @@ func (s *UserService) Login(ctx context.Context, req LoginUserParams) (LoginUser
 
 func (s *UserService) RenewAccessToken(ctx context.Context, req RenewAccessTokenParams) (RenewAccessTokenResponse, error) {
 	return s.authSvc.RenewAccessToken(ctx, req)
+}
+
+func (s *UserService) VerifyEmail(ctx context.Context, req db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error) {
+	return s.authSvc.VerifyEmail(ctx, req)
 }

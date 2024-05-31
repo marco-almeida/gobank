@@ -19,6 +19,7 @@ type UserService interface {
 	Login(context context.Context, req service.LoginUserParams) (service.LoginUserResponse, error)
 	Create(ctx context.Context, arg service.CreateUserParams) (db.User, error)
 	RenewAccessToken(context context.Context, req service.RenewAccessTokenParams) (service.RenewAccessTokenResponse, error)
+	VerifyEmail(ctx context.Context, req db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error)
 }
 
 // UserHandler is the handler for the user service
@@ -39,6 +40,7 @@ func (h *UserHandler) RegisterRoutes(r *gin.Engine) {
 	groupRoutes.POST("/v1/users", h.handleCreateUser)
 	groupRoutes.POST("/v1/users/login", h.handleLoginUser)
 	groupRoutes.POST("/v1/users/renew_access", h.handleRenewAccessToken)
+	groupRoutes.GET("/v1/users/verify_email", h.handleVerifyEmail)
 }
 
 type createUserRequest struct {
@@ -138,4 +140,33 @@ func (h *UserHandler) handleRenewAccessToken(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
+}
+
+type verifyEmailRequest struct {
+	EmailID    int64  `form:"email_id" binding:"required"`
+	SecretCode string `form:"secret_code" binding:"required"`
+}
+
+type verifyEmailResponse struct {
+	IsEmailVerified bool `json:"success"`
+}
+
+func (h *UserHandler) handleVerifyEmail(ctx *gin.Context) {
+	var req verifyEmailRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
+		return
+	}
+
+	result, err := h.userSvc.VerifyEmail(ctx, db.VerifyEmailTxParams{
+		EmailId:    req.EmailID,
+		SecretCode: req.SecretCode,
+	})
+
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, verifyEmailResponse{IsEmailVerified: result.User.IsEmailVerified})
 }
