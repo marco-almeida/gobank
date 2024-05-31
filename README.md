@@ -22,11 +22,12 @@ This project can be considered as a refactor and extension of techschool's cours
 Technical features:
 
 - [X] Project layout
+- [X] Layered Architecture
 - [X] Dependency Injection
 - [X] Rest API
 - [X] Versioning
 - [X] Pagination
-- [X] Error Handling (via middleware)
+- [X] Global Error Handling (via middleware)
 - [X] Authentication and Authorization (via middleware)
 - [X] Rate Limiting per IP (via middleware)
 - [X] Role-based access control
@@ -58,9 +59,7 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
   - `service`: Business logic code called by the handlers.
 - `api`: OpenAPI/Swagger specs, JSON schema files, protocol definition files.
 
-## Architecture
-
-Layered/Onion Architecture. Before server creation, the layers are instantiated and configured using dependency injection.
+Before server creation, the layers are instantiated and configured using dependency injection.
 
 Service interfaces are defined in the handler package and implemented in the service package.
 Repository interfaces are defined in the service package and implemented in the postgresql package.

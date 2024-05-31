@@ -37,10 +37,14 @@ func ErrorHandler() gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, errorResponse)
 			case errors.Is(unwrappedErr, internal.ErrInvalidCredentials):
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+			case errors.Is(unwrappedErr, internal.ErrUnverifiedAccount):
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "unverified account"})
 			case errors.Is(unwrappedErr, internal.ErrInvalidFromAccount):
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid from account"})
 			case errors.Is(unwrappedErr, internal.ErrInvalidToAccount):
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid to account"})
+			case errors.Is(unwrappedErr, internal.ErrVerifyEmailNotSent):
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "account verification email not sent"})
 			case errors.Is(unwrappedErr, internal.ErrAccountAlreadyExists):
 				c.JSON(http.StatusBadRequest, gin.H{"error": "account already exists"})
 			case errors.Is(unwrappedErr, internal.ErrInvalidParams):

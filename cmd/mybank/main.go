@@ -181,8 +181,11 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 	// init auth service
 	authService := service.NewAuthService(userRepo, sessionRepo, tokenMaker, config.AccessTokenDuration, config.RefreshTokenDuration)
 
+	// init mail service
+	mailService := service.NewGmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
+
 	// init user service
-	userService := service.NewUserService(userRepo, authService)
+	userService := service.NewUserService(userRepo, authService, mailService)
 
 	// init user handler and register routes
 	handler.NewUserHandler(userService).RegisterRoutes(router)

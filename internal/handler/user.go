@@ -14,9 +14,10 @@ import (
 
 // UserService defines the methods that the user handler will use
 type UserService interface {
-	Create(context context.Context, user service.CreateUserParams) (db.User, error)
+	// Create(context context.Context, user service.CreateUserParams) (db.User, error)
 	Get(context context.Context, username string) (db.User, error)
 	Login(context context.Context, req service.LoginUserParams) (service.LoginUserResponse, error)
+	Create(ctx context.Context, arg service.CreateUserParams) (db.User, error)
 	RenewAccessToken(context context.Context, req service.RenewAccessTokenParams) (service.RenewAccessTokenResponse, error)
 }
 
