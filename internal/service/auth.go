@@ -23,23 +23,25 @@ type SessionRepository interface {
 	Get(ctx context.Context, id uuid.UUID) (db.Session, error)
 }
 
-// AuthService defines the application service in charge of interacting with Auth.
-type AuthService struct {
+// AuthServiceImpl defines the application service in charge of interacting with Auth.
+type AuthServiceImpl struct {
 	sessionRepo          SessionRepository
-	userSvc              UserService
+	userRepo             UserRepository
+	verifyEmailRepo      VerifyEmailRepository
 	tokenMaker           token.Maker
 	accessTokenDuration  time.Duration
 	refreshTokenDuration time.Duration
 }
 
 // NewAuthService creates a new Auth service.
-func NewAuthService(userSvc UserService, sessionRepo SessionRepository, tokenMaker token.Maker, accessTokenDuration time.Duration, refreshTokenDuration time.Duration) *AuthService {
-	return &AuthService{
-		userSvc:              userSvc,
+func NewAuthService(userRepo UserRepository, sessionRepo SessionRepository, tokenMaker token.Maker, accessTokenDuration time.Duration, refreshTokenDuration time.Duration, verifyEmailRepo VerifyEmailRepository) *AuthServiceImpl {
+	return &AuthServiceImpl{
+		userRepo:             userRepo,
 		sessionRepo:          sessionRepo,
 		tokenMaker:           tokenMaker,
 		accessTokenDuration:  accessTokenDuration,
 		refreshTokenDuration: refreshTokenDuration,
+		verifyEmailRepo:      verifyEmailRepo,
 	}
 }
 
@@ -50,27 +52,37 @@ type CreateUserParams struct {
 	Email             string `json:"email" validate:"required,email"`
 }
 
-func (s *AuthService) Create(ctx context.Context, user CreateUserParams) (db.User, error) {
+type CreateUserTxParams struct {
+	Username          string
+	PlaintextPassword string
+	FullName          string
+	Email             string
+	AfterCreate       func(user db.User) error
+}
+
+func (s *AuthServiceImpl) Create(ctx context.Context, req CreateUserTxParams) (db.CreateUserTxResult, error) {
 	// validate CreateUserParams
-	err := validate.Struct(user)
+	err := validate.Struct(req)
 	if err != nil {
-		return db.User{}, err
+		return db.CreateUserTxResult{}, err
 	}
 
-	// hash plaintext password
-	hashedPassword, err := pkg.HashPassword(user.PlaintextPassword)
+	// hash password, call auth for this
+	hashedPassword, err := pkg.HashPassword(req.PlaintextPassword)
 	if err != nil {
-		return db.User{}, fmt.Errorf("cannot hash password: %w", err)
+		return db.CreateUserTxResult{}, err
 	}
 
-	// call userSvc.Create
-	arg := db.CreateUserParams{
-		Username:       user.Username,
-		HashedPassword: hashedPassword,
-		FullName:       user.FullName,
-		Email:          user.Email,
-	}
-	return s.userSvc.Create(ctx, arg)
+	return s.userRepo.CreateWithTx(ctx, db.CreateUserTxParams{
+		CreateUserParams: db.CreateUserParams{
+			Username:       req.Username,
+			HashedPassword: hashedPassword,
+			FullName:       req.FullName,
+			Email:          req.Email,
+		},
+		AfterCreate: req.AfterCreate,
+	})
+
 }
 
 type LoginUserParams struct {
@@ -97,13 +109,17 @@ type userResponse struct {
 	CreatedAt         time.Time `json:"created_at"`
 }
 
-func (s *AuthService) Login(ctx context.Context, req LoginUserParams) (LoginUserResponse, error) {
-	user, err := s.userSvc.Get(ctx, req.Username)
+func (s *AuthServiceImpl) Login(ctx context.Context, req LoginUserParams) (LoginUserResponse, error) {
+	user, err := s.userRepo.Get(ctx, req.Username)
 	if err != nil {
 		if errors.Is(err, internal.ErrNoRows) {
 			return LoginUserResponse{}, fmt.Errorf("%w; user not found: %w", internal.ErrInvalidCredentials, err)
 		}
 		return LoginUserResponse{}, err
+	}
+
+	if !user.IsEmailVerified {
+		return LoginUserResponse{}, internal.ErrUnverifiedAccount
 	}
 
 	err = pkg.CheckPassword(req.Password, user.HashedPassword)
@@ -158,7 +174,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginUserParams) (LoginUser
 	}, nil
 }
 
-type RenewAccessTokenRequest struct {
+type RenewAccessTokenParams struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
@@ -167,7 +183,7 @@ type RenewAccessTokenResponse struct {
 	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
 }
 
-func (s *AuthService) RenewAccessToken(ctx context.Context, req RenewAccessTokenRequest) (RenewAccessTokenResponse, error) {
+func (s *AuthServiceImpl) RenewAccessToken(ctx context.Context, req RenewAccessTokenParams) (RenewAccessTokenResponse, error) {
 	refreshPayload, err := s.tokenMaker.VerifyToken(req.RefreshToken)
 	if err != nil {
 		return RenewAccessTokenResponse{}, fmt.Errorf("%w; %w", internal.ErrInvalidToken, err)
@@ -214,4 +230,8 @@ func (s *AuthService) RenewAccessToken(ctx context.Context, req RenewAccessToken
 		AccessToken:          accessToken,
 		AccessTokenExpiresAt: accessPayload.ExpiredAt,
 	}, nil
+}
+
+func (s *AuthServiceImpl) VerifyEmail(ctx context.Context, req db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error) {
+	return s.verifyEmailRepo.Verify(ctx, req)
 }

@@ -35,3 +35,11 @@ func (userRepo *UserRepository) Get(ctx context.Context, username string) (db.Us
 	}
 	return user, nil
 }
+
+func (userRepo *UserRepository) CreateWithTx(ctx context.Context, arg db.CreateUserTxParams) (db.CreateUserTxResult, error) {
+	res, err := userRepo.q.CreateUserTx(ctx, arg)
+	if err != nil {
+		return db.CreateUserTxResult{}, internal.DBErrorToInternal(err)
+	}
+	return res, nil
+}

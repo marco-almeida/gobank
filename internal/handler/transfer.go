@@ -64,14 +64,14 @@ type transferRequest struct {
 func (h *TransferHandler) handleCreateTransfer(ctx *gin.Context) {
 	var req transferRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.Error(err)
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
 		return
 	}
 
 	fromAccount, err := h.accountSvc.Get(ctx, req.FromAccountID)
 	if err != nil {
 		if errors.Is(err, internal.ErrNoRows) {
-			ctx.JSON(http.StatusBadRequest, internal.RenderErrorResponse("invalid from account"))
+			ctx.Error(fmt.Errorf("%w: %w", internal.ErrInvalidFromAccount, err))
 			return
 		}
 		ctx.Error(err)
@@ -93,7 +93,7 @@ func (h *TransferHandler) handleCreateTransfer(ctx *gin.Context) {
 	toAccount, err := h.accountSvc.Get(ctx, req.ToAccountID)
 	if err != nil {
 		if errors.Is(err, internal.ErrNoRows) {
-			ctx.JSON(http.StatusBadRequest, internal.RenderErrorResponse("invalid to account"))
+			ctx.Error(fmt.Errorf("%w: %w", internal.ErrInvalidToAccount, err))
 			return
 		}
 		ctx.Error(err)

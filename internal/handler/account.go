@@ -51,7 +51,7 @@ type createAccountRequest struct {
 func (h *AccountHandler) handleCreateAccount(ctx *gin.Context) {
 	var req createAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.Error(err)
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
 		return
 	}
 
@@ -78,7 +78,7 @@ type getAccountRequest struct {
 func (h *AccountHandler) handleGetAccount(ctx *gin.Context) {
 	var req getAccountRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
-		ctx.Error(err)
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
 		return
 	}
 
@@ -110,7 +110,7 @@ type listAccountRequest struct {
 func (h *AccountHandler) handleListAccounts(ctx *gin.Context) {
 	var req listAccountRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		ctx.Error(err)
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
 		return
 	}
 
