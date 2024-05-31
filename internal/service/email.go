@@ -1,11 +1,12 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"net/smtp"
 
 	"github.com/jordan-wright/email"
-	"github.com/marco-almeida/mybank/internal"
+	"github.com/marco-almeida/mybank/internal/postgresql/db"
 )
 
 const (
@@ -13,7 +14,11 @@ const (
 	smtpServerAddress = "smtp.gmail.com:587"
 )
 
-type EmailSender interface {
+type VerifyEmailRepository interface {
+	Create(ctx context.Context, arg db.CreateVerifyEmailParams) (db.VerifyEmail, error)
+}
+
+type EmailService interface {
 	SendEmail(
 		subject string,
 		content string,
@@ -63,10 +68,4 @@ func (sender *GmailSender) SendEmail(
 
 	smtpAuth := smtp.PlainAuth("", sender.fromEmailAddress, sender.fromEmailPassword, smtpAuthAddress)
 	return e.Send(smtpServerAddress, smtpAuth)
-}
-
-func (s *GmailSender) SendWelcomeEmail(username string) error {
-	// fmt.Println("EMAIL ENVIADO PARA: ", username)
-	
-	return internal.ErrVerifyEmailNotSent
 }

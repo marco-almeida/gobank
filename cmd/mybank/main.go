@@ -15,6 +15,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -24,7 +25,9 @@ import (
 	"github.com/marco-almeida/mybank/internal/handler"
 	"github.com/marco-almeida/mybank/internal/middleware"
 	"github.com/marco-almeida/mybank/internal/postgresql"
+	redisRepo "github.com/marco-almeida/mybank/internal/redis"
 	"github.com/marco-almeida/mybank/internal/service"
+	redisSvc "github.com/marco-almeida/mybank/internal/service/redis"
 	"github.com/marco-almeida/mybank/internal/token"
 )
 
@@ -66,15 +69,12 @@ func main() {
 	// running in waitgroup coroutine in order to wait for graceful shutdown
 	waitGroup, ctx := errgroup.WithContext(ctx)
 
-	// redisOpt := asynq.RedisClientOpt{
-	// 	Addr: config.RedisAddress,
-	// }
+	redisOpt := asynq.RedisClientOpt{
+		Addr: config.RedisAddress,
+	}
 
-	// store := db.NewStore(connPool)
-
-	// taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
-	// runTaskProcessor(ctx, waitGroup, config, redisOpt, store)
-	runHTPPServer(ctx, waitGroup, config, connPool)
+	runTaskProcessor(ctx, waitGroup, config, connPool, redisOpt)
+	runHTPPServer(ctx, waitGroup, config, connPool, redisOpt)
 
 	err = waitGroup.Wait()
 	if err != nil {
@@ -118,34 +118,7 @@ func runDBMigration(migrationURL string, dbSource string) error {
 	return nil
 }
 
-// func runTaskProcessor(
-// 	ctx context.Context,
-// 	waitGroup *errgroup.Group,
-// 	config config.Config,
-// 	redisOpt asynq.RedisClientOpt,
-// 	store db.Store,
-// ) {
-// 	mailer := service.NewGmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
-// 	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer)
-
-// 	log.Info().Msg("start task processor")
-// 	err := taskProcessor.Start()
-// 	if err != nil {
-// 		log.Fatal().Err(err).Msg("failed to start task processor")
-// 	}
-
-// 	waitGroup.Go(func() error {
-// 		<-ctx.Done()
-// 		log.Info().Msg("graceful shutdown task processor")
-
-// 		taskProcessor.Shutdown()
-// 		log.Info().Msg("task processor is stopped")
-
-// 		return nil
-// 	})
-// }
-
-func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, error) {
+func newServer(config config.Config, connPool *pgxpool.Pool, redisOpt asynq.RedisClientOpt) (*http.Server, error) {
 	if config.Environment != "development" && config.Environment != "testing" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -181,11 +154,11 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 	// init auth service
 	authService := service.NewAuthService(userRepo, sessionRepo, tokenMaker, config.AccessTokenDuration, config.RefreshTokenDuration)
 
-	// init mail service
-	mailService := service.NewGmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
+	// init userverifymail repo
+	userVerifyEmailRepo := redisRepo.NewUserMessageBrokerRepository(redisOpt)
 
 	// init user service
-	userService := service.NewUserService(userRepo, authService, mailService)
+	userService := service.NewUserService(userRepo, authService, userVerifyEmailRepo)
 
 	// init user handler and register routes
 	handler.NewUserHandler(userService).RegisterRoutes(router)
@@ -211,29 +184,67 @@ func newServer(config config.Config, connPool *pgxpool.Pool) (*http.Server, erro
 	return srv, nil
 }
 
-func runHTPPServer(ctx context.Context, waitGroup *errgroup.Group, config config.Config, connPool *pgxpool.Pool) {
-	server, err := newServer(config, connPool)
+func runHTPPServer(ctx context.Context, waitGroup *errgroup.Group, config config.Config, connPool *pgxpool.Pool, redisOpt asynq.RedisClientOpt) {
+	server, err := newServer(config, connPool, redisOpt)
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot create server")
+		log.Fatal().Err(err).Msg("cannot create HTTP server")
 	}
 
 	waitGroup.Go(func() error {
 		log.Info().Msg(fmt.Sprintf("start HTTP server on %s", server.Addr))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			return fmt.Errorf("cannot start server: %w", err)
+			return fmt.Errorf("cannot start HTTP server: %w", err)
 		}
 		return nil
 	})
 
 	waitGroup.Go(func() error {
 		<-ctx.Done()
-		log.Info().Msg("shutting down gracefully, press Ctrl+C again to force")
+		log.Info().Msg("shutting down HTTP server gracefully, press Ctrl+C again to force")
 
 		if err := server.Shutdown(ctx); err != nil {
-			return fmt.Errorf("server forced to shutdown: %w", err)
+			return fmt.Errorf("HTTP server forced to shutdown: %w", err)
 		}
 
 		log.Info().Msg("HTTP server stopped")
+
+		return nil
+	})
+
+}
+
+func runTaskProcessor(
+	ctx context.Context,
+	waitGroup *errgroup.Group,
+	config config.Config,
+	pool *pgxpool.Pool,
+	redisOpt asynq.RedisClientOpt,
+) {
+	// init mailer service
+	mailer := service.NewGmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
+
+	// init user repo
+	userRepo := postgresql.NewUserRepository(pool)
+
+	// init verify email repo
+	verifyEmailRepo := postgresql.NewVerifyEmailRepository(pool)
+
+	taskProcessor := redisSvc.NewRedisTaskProcessor(redisOpt, mailer, userRepo, verifyEmailRepo)
+
+	waitGroup.Go(func() error {
+		log.Info().Msg("start task processor")
+		if err := taskProcessor.Start(); err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("failed to start task processor")
+		}
+		return nil
+	})
+
+	waitGroup.Go(func() error {
+		<-ctx.Done()
+		log.Info().Msg("shutting down task processor gracefully, press Ctrl+C again to force")
+
+		time.Sleep(2 * time.Second)
+		log.Info().Msg("task processor is stopped")
 
 		return nil
 	})

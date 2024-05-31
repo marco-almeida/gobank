@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/hibiken/asynq"
-	"github.com/marco-almeida/mybank/internal/postgresql/db"
+	redisRepo "github.com/marco-almeida/mybank/internal/redis"
 	"github.com/marco-almeida/mybank/internal/service"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
@@ -22,12 +22,13 @@ type TaskProcessor interface {
 }
 
 type RedisTaskProcessor struct {
-	server *asynq.Server
-	store  db.Store
-	mailer service.EmailSender
+	server          *asynq.Server
+	emailService    service.EmailService
+	userRepo        service.UserRepository
+	verifyEmailRepo service.VerifyEmailRepository
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, mailer service.EmailSender) TaskProcessor {
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, emailService service.EmailService, userRepo service.UserRepository, verifyEmailRepo service.VerifyEmailRepository) TaskProcessor {
 	logger := NewLogger()
 	redis.SetLogger(logger)
 
@@ -47,9 +48,10 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, mailer
 	)
 
 	return &RedisTaskProcessor{
-		server: server,
-		store:  store,
-		mailer: mailer,
+		server:          server,
+		emailService:    emailService,
+		userRepo:        userRepo,
+		verifyEmailRepo: verifyEmailRepo,
 	}
 }
 
@@ -57,7 +59,7 @@ func (processor *RedisTaskProcessor) Start() error {
 	mux := asynq.NewServeMux()
 
 	// register tasks handlers
-	mux.HandleFunc(TaskSendVerifyEmail, processor.ProcessTaskSendVerifyEmail)
+	mux.HandleFunc(redisRepo.TaskSendVerifyEmail, processor.ProcessTaskSendVerifyEmail)
 
 	return processor.server.Start(mux)
 }

@@ -27,6 +27,12 @@ services:
       interval: 5s # check every 5 seconds
       timeout: 5s # wait 5 seconds for the check to complete
       retries: 10 # allow 10 retries before considering the container as unhealthy
+  redis:
+    image: redis:7.2.5-alpine
+    networks:
+      - mybank
+    ports:
+      - ${REDIS_PORT}:6379
   # mybank:
   #   container_name: mybank
   #   image: mybank:latest
