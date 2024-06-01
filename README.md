@@ -16,8 +16,8 @@ This project can be considered as a refactor and extension of techschool's cours
 - [X] User creation
 - [X] Account creation
 - [X] Transfers
-- [ ] Deposits
-- [ ] Withdrawals
+- [X] Deposits
+- [X] Withdrawals
 
 Technical features:
 
@@ -36,9 +36,9 @@ Technical features:
 - [X] Secure configuration
 - [X] OpenAPI documentation
 - [X] Database migrations
+- [X] Graceful shutdown
 - [X] Containerization (using docker multi-stage builds)
 - [X] Container Orchestration (using docker compose)
-- [X] Graceful shutdown
 - [X] Testing (with coverage analysis) triggered by CI/CD
 
 ## Project Layout
@@ -56,7 +56,7 @@ The [Standard Go Project Layout](https://github.com/golang-standards/project-lay
   - `config`: Configuration code.
   - `pkg`: Code shared by the internal packages.
   - `middleware`: Middlewares used by the handlers/router.
-  - `postgresql`: PostgreSQL interaction code.
+  - `<datastoreName>`: Data store(postgresql, redis) interaction code.
   - `service`: Business logic code called by the handlers.
 - `api`: OpenAPI/Swagger specs, JSON schema files, protocol definition files.
 

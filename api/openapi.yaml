@@ -6,112 +6,104 @@ info:
 servers:
   - url: http://localhost:3000
 paths:
-  /api/v1/users/{user_id}:
+  /api/v1/accounts:
     get:
       tags:
-        - Users
-      summary: Get user
-      description: Get user
-      operationId: getUser
+        - Accounts
+      summary: List accounts
+      description: List accounts
+      operationId: listAccounts
+      parameters:
+        - name: page_id
+          in: query
+          schema:
+            type: string
+            example: '1'
+        - name: page_size
+          in: query
+          schema:
+            type: string
+            example: '5'
       responses:
         '200':
           description: ''
-    put:
+    post:
       tags:
-        - Users
-      summary: Modify all parameters
-      description: Modify all parameters
-      operationId: modifyAllParameters
+        - Accounts
+      summary: Create account
+      description: Create account
+      operationId: createAccount
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                email:
+                currency:
                   type: string
-                  example: teste
-                firstName:
-                  type: string
-                  example: t1
-                lastName:
-                  type: string
-                  example: t2
-                password:
-                  type: string
-                  example: t5
+                  example: CAD
             example:
-              email: teste
-              firstName: t1
-              lastName: t2
-              password: t5
+              currency: CAD
+      responses:
+        '200':
+          description: ''
+  /api/v1/accounts/{id}:
+    get:
+      tags:
+        - Accounts
+      summary: Get account
+      description: Get account
+      operationId: getAccount
       responses:
         '200':
           description: ''
     delete:
       tags:
-        - Users
-      summary: Delete user
-      description: Delete user
-      operationId: deleteUser
+        - Accounts
+      summary: Delete account
+      description: Delete account
+      operationId: deleteAccount
       responses:
         '200':
           description: ''
-    patch:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: '125'
+  /api/v1/accounts/{id}/balance:
+    post:
       tags:
-        - Users
-      summary: Modify parameter
-      description: Modify parameter
-      operationId: modifyParameter
+        - Accounts
+      summary: Add balance
+      description: Add balance
+      operationId: addBalance
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              properties:
-                password:
-                  type: string
-                  example: pw
-            example:
-              password: pw
+              properties: {}
+            example: {}
       responses:
         '200':
           description: ''
     parameters:
-      - name: user_id
+      - name: id
         in: path
         required: true
         schema:
           type: string
-          example: '15'
-  /api/v1/users:
-    get:
-      tags:
-        - Users
-      summary: Get all users
-      description: Get all users
-      operationId: getAllUsers
-      parameters:
-        - in: query
-          name: offset
-          schema:
-            type: integer
-          description: The number of items to skip before starting to collect the result set
-        - in: query
-          name: limit
-          schema:
-            type: integer
-          description: The numbers of items to return
-      responses:
-        '200':
-          description: ''
-  /api/v1/users/{user_id}/accounts/{account_id}/updateBalance:
+          example: '1'
+  /api/v1/transfers:
     post:
       tags:
-        - Accounts
-      summary: Update balance
-      description: Update balance
-      operationId: updateBalance
+        - Transfers
+      summary: Create transfer
+      description: Create transfer
+      operationId: createTransfer
       requestBody:
         content:
           application/json:
@@ -120,101 +112,31 @@ paths:
               properties:
                 amount:
                   type: number
-                  example: 78
+                  example: 10
+                currency:
+                  type: string
+                  example: CAD
+                from_account_id:
+                  type: number
+                  example: 17
+                to_account_id:
+                  type: number
+                  example: 16
             example:
-              amount: 78
+              amount: 10
+              currency: CAD
+              from_account_id: 17
+              to_account_id: 16
       responses:
         '200':
           description: ''
-    parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          example: '16'
-      - name: account_id
-        in: path
-        required: true
-        schema:
-          type: string
-          example: '1'
-  /api/v1/users/{user_id}/accounts/{account_id}:
-    get:
-      tags:
-        - Accounts
-      summary: Get user back account
-      description: Get user back account
-      operationId: getUserBackAccount
-      responses:
-        '200':
-          description: ''
-    delete:
-      tags:
-        - Accounts
-      summary: Delete bank account
-      description: Delete bank account
-      operationId: deleteBankAccount
-      responses:
-        '200':
-          description: ''
-    parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          example: '16'
-      - name: account_id
-        in: path
-        required: true
-        schema:
-          type: string
-          example: '1'
-  /api/v1/users/{user_id}/accounts:
-    get:
-      tags:
-        - Accounts
-      summary: Get all user bank accounts
-      description: Get all user bank accounts
-      operationId: getAllUserBankAccounts
-      parameters:
-        - in: query
-          name: offset
-          schema:
-            type: integer
-          description: The number of items to skip before starting to collect the result set
-        - in: query
-          name: limit
-          schema:
-            type: integer
-          description: The numbers of items to return
-      responses:
-        '200':
-          description: ''
+  /api/v1/users:
     post:
       tags:
-        - Accounts
-      summary: Create bank account
-      description: Create bank account
-      operationId: createBankAccount
-      responses:
-        '200':
-          description: ''
-    parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          example: '16'
-  /api/v1/auth/register:
-    post:
-      tags:
-        - Auth
-      summary: Register user
-      description: Creates a bank account for a new user, mail must be unique
-      operationId: registerUser
+        - Users
+      summary: Create user
+      description: Create user
+      operationId: createUser
       requestBody:
         content:
           application/json:
@@ -223,31 +145,79 @@ paths:
               properties:
                 email:
                   type: string
-                  example: emaieel
-                firstName:
+                  example: asd@asd.ceom
+                full_name:
                   type: string
-                  example: firstName
-                lastName:
-                  type: string
-                  example: lastName
+                  example: banker
                 password:
                   type: string
-                  example: password
+                  example: qweqwe
+                username:
+                  type: string
+                  example: banke43r
             example:
-              email: emaieel
-              firstName: firstName
-              lastName: lastName
-              password: password
+              email: asd@asd.ceom
+              full_name: banker
+              password: qweqwe
+              username: banke43r
       responses:
         '200':
           description: ''
-  /api/v1/auth/login:
+  /api/v1/users/login:
     post:
       tags:
-        - Auth
-      summary: Login
-      description: Login
-      operationId: login
+        - Users
+      summary: Login user
+      description: Login user
+      operationId: loginUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  example: banker123
+                username:
+                  type: string
+                  example: banker
+            example:
+              password: banker123
+              username: banker
+      responses:
+        '200':
+          description: ''
+  /api/v1/users/renew_access:
+    post:
+      tags:
+        - Users
+      summary: Renew token
+      description: Renew token
+      operationId: renewToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+                  example: >-
+                    eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmYzRiYWYyLTlhYmUtNDU3Yy05MDU0LWIwM2JlMGFhMDFmZCIsInVzZXJuYW1lIjoibWFyY28xMjMiLCJyb2xlIjoiZGVwb3NpdG9yIiwiaXNzdWVkX2F0IjoiMjAyNC0wNS0yOVQyMzo1OTo1MS40MTEzMDE1KzAxOjAwIiwiZXhwaXJlZF9hdCI6IjIwMjQtMDUtMzBUMjM6NTk6NTEuNDExMzAxNSswMTowMCJ9.8lxNtIC9UwwP-Z2CLdpLq3ayLRxYed40L_f1FX9xGkY
+            example:
+              refresh_token: >-
+                eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFmYzRiYWYyLTlhYmUtNDU3Yy05MDU0LWIwM2JlMGFhMDFmZCIsInVzZXJuYW1lIjoibWFyY28xMjMiLCJyb2xlIjoiZGVwb3NpdG9yIiwiaXNzdWVkX2F0IjoiMjAyNC0wNS0yOVQyMzo1OTo1MS40MTEzMDE1KzAxOjAwIiwiZXhwaXJlZF9hdCI6IjIwMjQtMDUtMzBUMjM6NTk6NTEuNDExMzAxNSswMTowMCJ9.8lxNtIC9UwwP-Z2CLdpLq3ayLRxYed40L_f1FX9xGkY
+      responses:
+        '200':
+          description: ''
+  /api/v1/users/{username}:
+    patch:
+      tags:
+        - Users
+      summary: Update user
+      description: Update user
+      operationId: updateUser
       requestBody:
         content:
           application/json:
@@ -256,17 +226,28 @@ paths:
               properties:
                 email:
                   type: string
-                  example: email
+                  example: banker@gmail.com
+                full_name:
+                  type: string
+                  example: bankeiro do gmail
                 password:
                   type: string
-                  example: password
+                  example: banker123
             example:
-              email: email
-              password: password
+              email: banker@gmail.com
+              full_name: bankeiro do gmail
+              password: banker123
       responses:
         '200':
           description: ''
+    parameters:
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+          example: banker
 tags:
-  - name: Users
   - name: Accounts
-  - name: Auth
+  - name: Transfers
+  - name: Users
