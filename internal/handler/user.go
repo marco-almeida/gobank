@@ -2,14 +2,18 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/marco-almeida/mybank/internal"
+	"github.com/marco-almeida/mybank/internal/middleware"
+	"github.com/marco-almeida/mybank/internal/pkg"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 	"github.com/marco-almeida/mybank/internal/service"
+	"github.com/marco-almeida/mybank/internal/token"
 )
 
 // UserService defines the methods that the user handler will use
@@ -20,6 +24,7 @@ type UserService interface {
 	Create(ctx context.Context, arg service.CreateUserParams) (db.User, error)
 	RenewAccessToken(context context.Context, req service.RenewAccessTokenParams) (service.RenewAccessTokenResponse, error)
 	VerifyEmail(ctx context.Context, req db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error)
+	Update(ctx context.Context, arg service.UpdateUserParams) (db.User, error)
 }
 
 // UserHandler is the handler for the user service
@@ -35,12 +40,14 @@ func NewUserHandler(userSvc UserService) *UserHandler {
 }
 
 // RegisterRoutes connects the handlers to the router
-func (h *UserHandler) RegisterRoutes(r *gin.Engine) {
+func (h *UserHandler) RegisterRoutes(r *gin.Engine, tokenMaker token.Maker) {
 	groupRoutes := r.Group("/api")
 	groupRoutes.POST("/v1/users", h.handleCreateUser)
 	groupRoutes.POST("/v1/users/login", h.handleLoginUser)
 	groupRoutes.POST("/v1/users/renew_access", h.handleRenewAccessToken)
 	groupRoutes.GET("/v1/users/verify_email", h.handleVerifyEmail)
+
+	groupRoutes.PATCH("/v1/users/:username", middleware.Authentication(tokenMaker, []string{pkg.DepositorRole, pkg.BankerRole}), h.handleUpdateUser)
 }
 
 type createUserRequest struct {
@@ -89,7 +96,7 @@ func (h *UserHandler) handleCreateUser(ctx *gin.Context) {
 	}
 
 	rsp := newUserResponse(user)
-	ctx.JSON(http.StatusOK, rsp)
+	ctx.JSON(http.StatusAccepted, rsp)
 }
 
 type loginUserRequest struct {
@@ -169,4 +176,50 @@ func (h *UserHandler) handleVerifyEmail(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, verifyEmailResponse{IsEmailVerified: result.User.IsEmailVerified})
+}
+
+type updateUserBodyRequest struct {
+	FullName string `json:"full_name" `
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type updateUserUriRequest struct {
+	Username string `uri:"username" binding:"required,alphanum"`
+}
+
+func (h *UserHandler) handleUpdateUser(ctx *gin.Context) {
+	var req updateUserUriRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
+		return
+	}
+
+	var args updateUserBodyRequest
+	if err := ctx.ShouldBindJSON(&args); err != nil {
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
+		return
+	}
+
+	arg := service.UpdateUserParams{
+		Username:          req.Username,
+		PlaintextPassword: args.Password,
+		FullName:          args.FullName,
+		Email:             args.Email,
+	}
+
+	authPayload := ctx.MustGet(middleware.AuthorizationPayloadKey).(*token.Payload)
+	overridePermission := ctx.MustGet(middleware.OverridePermissionKey).(bool)
+	if !overridePermission && req.Username != authPayload.Username {
+		err := errors.New("user doesn't belong to the authenticated user")
+		ctx.Error(fmt.Errorf("%w; user doesn't belong to the authenticated user: %w", internal.ErrForbidden, err))
+		return
+	}
+	user, err := h.userSvc.Update(ctx, arg)
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, newUserResponse(user))
 }

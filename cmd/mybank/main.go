@@ -164,7 +164,7 @@ func newServer(config config.Config, connPool *pgxpool.Pool, redisOpt asynq.Redi
 	userService := service.NewUserService(userRepo, authService, userVerifyEmailRepo)
 
 	// init user handler and register routes
-	handler.NewUserHandler(userService).RegisterRoutes(router)
+	handler.NewUserHandler(userService).RegisterRoutes(router, tokenMaker)
 
 	// init account repo
 	accountRepo := postgresql.NewAccountRepository(connPool)

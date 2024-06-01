@@ -84,7 +84,8 @@ func (h *TransferHandler) handleCreateTransfer(ctx *gin.Context) {
 	}
 
 	authPayload := ctx.MustGet(middleware.AuthorizationPayloadKey).(*token.Payload)
-	if fromAccount.Owner != authPayload.Username {
+	overridePermission := ctx.MustGet(middleware.OverridePermissionKey).(bool)
+	if !overridePermission && fromAccount.Owner != authPayload.Username {
 		err := errors.New("from account doesn't belong to the authenticated user")
 		ctx.Error(fmt.Errorf("%w; from account doesn't belong to the authenticated user: %w", internal.ErrForbidden, err))
 		return

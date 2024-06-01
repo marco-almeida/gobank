@@ -43,3 +43,11 @@ func (userRepo *UserRepository) CreateWithTx(ctx context.Context, arg db.CreateU
 	}
 	return res, nil
 }
+
+func (userRepo *UserRepository) Update(ctx context.Context, arg db.UpdateUserParams) (db.User, error) {
+	user, err := userRepo.q.UpdateUser(ctx, arg)
+	if err != nil {
+		return db.User{}, internal.DBErrorToInternal(err)
+	}
+	return user, nil
+}

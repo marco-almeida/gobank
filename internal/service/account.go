@@ -14,6 +14,7 @@ type AccountRepository interface {
 	Create(context context.Context, account db.CreateAccountParams) (db.Account, error)
 	Get(context context.Context, id int64) (db.Account, error)
 	List(ctx context.Context, arg db.ListAccountsParams) ([]db.Account, error)
+	Delete(ctx context.Context, id int64) error
 }
 
 // AccountService defines the application service in charge of interacting with Accounts.
@@ -46,4 +47,15 @@ func (s *AccountService) Get(ctx context.Context, id int64) (db.Account, error) 
 
 func (s *AccountService) List(ctx context.Context, arg db.ListAccountsParams) ([]db.Account, error) {
 	return s.repo.List(ctx, arg)
+}
+
+func (s *AccountService) Delete(ctx context.Context, id int64) error {
+	acc, err := s.repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if acc.Balance != 0 {
+		return internal.ErrBalanceNotZero
+	}
+	return s.repo.Delete(ctx, id)
 }
