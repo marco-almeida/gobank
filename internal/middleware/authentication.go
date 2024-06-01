@@ -51,24 +51,45 @@ func Authentication(tokenMaker token.Maker, rolesWithPermission []string) gin.Ha
 			return
 		}
 
-		ctx.Set(OverridePermissionKey, CanOverridePermission(payload.Role, rolesWithPermission))
+		if !hasAuthorization(payload.Role, rolesWithPermission) {
+			err := errors.New("forbidden")
+			ctx.AbortWithStatusJSON(http.StatusForbidden, internal.RenderErrorResponse(err.Error()))
+			return
+		}
+
+		ctx.Set(OverridePermissionKey, canOverridePermission(payload.Role, rolesWithPermission))
 
 		ctx.Set(AuthorizationPayloadKey, payload)
 		ctx.Next()
 	}
 }
 
-func CanOverridePermission(userRole string, rolesWithPermission []string) bool {
+func hasAuthorization(userRole string, rolesWithPermission []string) bool {
 	if userRole == pkg.AdminRole {
 		return true
 	}
 
-	// if bankers are supposed to access, allow
+	return contains(rolesWithPermission, userRole)
+}
+
+func canOverridePermission(userRole string, rolesWithPermission []string) bool {
+	if userRole == pkg.AdminRole {
+		return true
+	}
+
+	// if bankers can override, allow
 	if userRole == pkg.BankerRole {
-		for _, role := range rolesWithPermission {
-			if role == pkg.BankerRole {
-				return true
-			}
+		if contains(rolesWithPermission, pkg.BankerRole) {
+			return true
+		}
+	}
+	return false
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
 		}
 	}
 	return false

@@ -31,6 +31,7 @@ var (
 	ErrUnverifiedAccount             = errors.New("unverified account")
 	ErrVerifyEmailNotSent            = errors.New("verify email not sent")
 	ErrInvalidToAccount              = errors.New("invalid to account")
+	ErrBalanceNotZero                = errors.New("balance not zero")
 	ErrAccountAlreadyExists          = errors.New("account already exists")
 	ErrCurrencyMismatch              = errors.New("currency mismatch")
 	ErrForbidden                     = errors.New("forbidden")

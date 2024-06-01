@@ -37,6 +37,8 @@ func ErrorHandler() gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, errorResponse)
 			case errors.Is(unwrappedErr, internal.ErrInvalidCredentials):
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+			case errors.Is(unwrappedErr, internal.ErrBalanceNotZero):
+				c.JSON(http.StatusBadRequest, gin.H{"error": "balance not zero"})
 			case errors.Is(unwrappedErr, internal.ErrUnverifiedAccount):
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "unverified account"})
 			case errors.Is(unwrappedErr, internal.ErrInvalidFromAccount):
