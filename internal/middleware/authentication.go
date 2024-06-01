@@ -51,14 +51,14 @@ func Authentication(tokenMaker token.Maker, rolesWithPermission []string) gin.Ha
 			return
 		}
 
-		ctx.Set(OverridePermissionKey, HasPermission(payload.Role, rolesWithPermission))
+		ctx.Set(OverridePermissionKey, CanOverridePermission(payload.Role, rolesWithPermission))
 
 		ctx.Set(AuthorizationPayloadKey, payload)
 		ctx.Next()
 	}
 }
 
-func HasPermission(userRole string, rolesWithPermission []string) bool {
+func CanOverridePermission(userRole string, rolesWithPermission []string) bool {
 	if userRole == pkg.AdminRole {
 		return true
 	}
