@@ -20,6 +20,7 @@ type AccountService interface {
 	Get(context context.Context, id int64) (db.Account, error)
 	List(ctx context.Context, arg db.ListAccountsParams) ([]db.Account, error)
 	Delete(ctx context.Context, id int64) error
+	AddBalance(ctx context.Context, owner string, overridePermission bool, arg db.AddAccountBalanceParams) (db.Account, error)
 }
 
 // AccountHandler is the handler for the account service
@@ -40,6 +41,7 @@ func (h *AccountHandler) RegisterRoutes(r *gin.Engine, tokenMaker token.Maker) {
 	authRoutes.POST("/v1/accounts", h.handleCreateAccount)
 	authRoutes.GET("/v1/accounts/:id", h.handleGetAccount)
 	authRoutes.GET("/v1/accounts", h.handleListAccounts)
+	authRoutes.POST("/v1/accounts/:id/balance", h.handleUpdateAmount)
 
 	adminRoutes := r.Group("/api").Use(middleware.Authentication(tokenMaker, []string{pkg.BankerRole}))
 	adminRoutes.DELETE("/v1/accounts/:id", h.handleDeleteAccount) // only accessible by bank workers (or admins)
@@ -149,4 +151,40 @@ func (h *AccountHandler) handleDeleteAccount(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusNoContent, nil)
+}
+
+type updateAmountBodyRequest struct {
+	Amount int64 `json:"amount" binding:"required"`
+}
+
+type updateAmountUriRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+func (h *AccountHandler) handleUpdateAmount(ctx *gin.Context) {
+	var req2 updateAmountUriRequest
+	if err := ctx.ShouldBindUri(&req2); err != nil {
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
+		return
+	}
+
+	var req updateAmountBodyRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.Error(fmt.Errorf("%w; %w", internal.ErrInvalidParams, err))
+		return
+	}
+
+	authPayload := ctx.MustGet(middleware.AuthorizationPayloadKey).(*token.Payload)
+	overridePermission := ctx.MustGet(middleware.OverridePermissionKey).(bool)
+	updatedAccount, err := h.accountSvc.AddBalance(ctx, authPayload.Username, overridePermission, db.AddAccountBalanceParams{
+		ID:     req2.ID,
+		Amount: req.Amount,
+	})
+
+	if err != nil {
+		ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, updatedAccount)
 }
