@@ -9,9 +9,9 @@ import (
 
 // UserRepository defines the methods that any User repository should implement.
 type UserRepository interface {
-	Create(ctx context.Context, arg db.CreateUserParams) (db.User, error)
 	Get(ctx context.Context, username string) (db.User, error)
 	CreateWithTx(ctx context.Context, arg db.CreateUserTxParams) (db.CreateUserTxResult, error)
+	Update(ctx context.Context, arg db.UpdateUserParams) (db.User, error)
 }
 
 // AuthService defines the application service in charge of interacting with Users.
@@ -20,7 +20,7 @@ type AuthService interface {
 	Login(ctx context.Context, req LoginUserParams) (LoginUserResponse, error)
 	RenewAccessToken(ctx context.Context, req RenewAccessTokenParams) (RenewAccessTokenResponse, error)
 	VerifyEmail(ctx context.Context, req db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error)
-	// CreateWithTx(ctx context.Context, arg db.CreateUserTxParams) (db.CreateUserTxResult, error)
+	Update(ctx context.Context, arg UpdateUserParams) (db.User, error)
 }
 
 // UserMessageBrokerRepository defines the methods that any UserMessageBrokerRepository should implement.
@@ -82,4 +82,15 @@ func (s *UserService) RenewAccessToken(ctx context.Context, req RenewAccessToken
 
 func (s *UserService) VerifyEmail(ctx context.Context, req db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error) {
 	return s.authSvc.VerifyEmail(ctx, req)
+}
+
+type UpdateUserParams struct {
+	Username          string
+	PlaintextPassword string
+	FullName          string
+	Email             string
+}
+
+func (s *UserService) Update(ctx context.Context, arg UpdateUserParams) (db.User, error) {
+	return s.authSvc.Update(ctx, arg)
 }

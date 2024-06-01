@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/marco-almeida/mybank/internal"
 	"github.com/marco-almeida/mybank/internal/pkg"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
@@ -234,4 +235,68 @@ func (s *AuthServiceImpl) RenewAccessToken(ctx context.Context, req RenewAccessT
 
 func (s *AuthServiceImpl) VerifyEmail(ctx context.Context, req db.VerifyEmailTxParams) (db.VerifyEmailTxResult, error) {
 	return s.verifyEmailRepo.Verify(ctx, req)
+}
+
+type UpdateUserFullnameParams struct {
+	FullName string `json:"full_name" validate:"required,alphanum"`
+}
+
+type UpdateUserEmailParams struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type UpdateUserPasswordParams struct {
+	Password string `json:"password" validate:"required,min=6"`
+}
+
+func (s *AuthServiceImpl) Update(ctx context.Context, arg UpdateUserParams) (db.User, error) {
+	// if there is email and it is not valid, return error
+	// if there is password and password is less than 6, return error
+
+	args := db.UpdateUserParams{
+		Username: arg.Username,
+	}
+
+	args.FullName = pgtype.Text{
+		String: arg.FullName,
+		Valid:  arg.FullName != "",
+	}
+
+	if arg.Email != "" {
+		err := validate.Struct(UpdateUserEmailParams{arg.Email})
+		if err != nil {
+			return db.User{}, err
+		}
+
+		args.Email = pgtype.Text{
+			String: arg.Email,
+			Valid:  true,
+		}
+	}
+
+	if arg.PlaintextPassword != "" {
+		err := validate.Struct(UpdateUserPasswordParams{arg.PlaintextPassword})
+		if err != nil {
+			return db.User{}, err
+		}
+
+		hashedPasword, err := pkg.HashPassword(arg.PlaintextPassword)
+		if err != nil {
+			return db.User{}, err
+		}
+
+		args.HashedPassword = pgtype.Text{
+			String: hashedPasword,
+			Valid:  true,
+		}
+
+		args.PasswordChangedAt = pgtype.Timestamptz{Time: time.Now(), Valid: true}
+	}
+
+	user, err := s.userRepo.Update(ctx, args)
+	if err != nil {
+		return db.User{}, err
+	}
+
+	return user, nil
 }

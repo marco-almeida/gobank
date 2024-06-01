@@ -11,9 +11,11 @@ import (
 
 // AccountRepository defines the methods that any Account repository should implement.
 type AccountRepository interface {
-	Create(context context.Context, account db.CreateAccountParams) (db.Account, error)
-	Get(context context.Context, id int64) (db.Account, error)
+	Create(ctx context.Context, account db.CreateAccountParams) (db.Account, error)
+	Get(ctx context.Context, id int64) (db.Account, error)
 	List(ctx context.Context, arg db.ListAccountsParams) ([]db.Account, error)
+	Delete(ctx context.Context, id int64) error
+	AddBalance(ctx context.Context, arg db.AddAccountBalanceParams) (db.Account, error)
 }
 
 // AccountService defines the application service in charge of interacting with Accounts.
@@ -46,4 +48,32 @@ func (s *AccountService) Get(ctx context.Context, id int64) (db.Account, error) 
 
 func (s *AccountService) List(ctx context.Context, arg db.ListAccountsParams) ([]db.Account, error) {
 	return s.repo.List(ctx, arg)
+}
+
+func (s *AccountService) Delete(ctx context.Context, id int64) error {
+	acc, err := s.repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if acc.Balance != 0 {
+		return internal.ErrBalanceNotZero
+	}
+	return s.repo.Delete(ctx, id)
+}
+
+func (s *AccountService) AddBalance(ctx context.Context, owner string, overridePermission bool, arg db.AddAccountBalanceParams) (db.Account, error) {
+	if !overridePermission {
+		account, err := s.repo.Get(ctx, arg.ID)
+		if err != nil {
+			if errors.Is(err, internal.ErrNoRows) {
+				return db.Account{}, fmt.Errorf("%w: %s", internal.ErrForbidden, err.Error())
+			}
+			return db.Account{}, err
+		}
+		if account.Owner != owner {
+			return db.Account{}, internal.ErrForbidden
+		}
+	}
+
+	return s.repo.AddBalance(ctx, arg)
 }

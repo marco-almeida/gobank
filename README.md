@@ -32,6 +32,7 @@ Technical features:
 - [X] Rate Limiting per IP (via middleware)
 - [X] Role-based access control
 - [X] Persistent storage (with PostgreSQL)
+- [X] Background tasks (with Redis)
 - [X] Secure configuration
 - [X] OpenAPI documentation
 - [X] Database migrations

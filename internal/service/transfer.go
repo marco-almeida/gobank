@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"github.com/marco-almeida/mybank/internal"
 	"github.com/marco-almeida/mybank/internal/postgresql/db"
 )
 
@@ -24,5 +25,8 @@ func NewTransferService(repo TransferRepository) *TransferService {
 }
 
 func (s *TransferService) CreateTx(context context.Context, arg db.TransferTxParams) (db.TransferTxResult, error) {
+	if arg.FromAccountID == arg.ToAccountID {
+		return db.TransferTxResult{}, internal.ErrInvalidToAccount
+	}
 	return s.repo.CreateTx(context, arg)
 }

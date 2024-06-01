@@ -43,3 +43,19 @@ func (accountRepo *AccountRepository) List(ctx context.Context, arg db.ListAccou
 	}
 	return accounts, nil
 }
+
+func (accountRepo *AccountRepository) Delete(ctx context.Context, id int64) error {
+	err := accountRepo.q.DeleteAccount(ctx, id)
+	if err != nil {
+		return internal.DBErrorToInternal(err)
+	}
+	return nil
+}
+
+func (accountRepo *AccountRepository) AddBalance(ctx context.Context, arg db.AddAccountBalanceParams) (db.Account, error) {
+	acc, err := accountRepo.q.AddAccountBalance(ctx, arg)
+	if err != nil {
+		return db.Account{}, internal.DBErrorToInternal(err)
+	}
+	return acc, nil
+}
